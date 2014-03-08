@@ -5,8 +5,14 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include <stdlib.h>
 #include <stdbool.h>
+
+#include "sanet.h"
+
+struct connect_inst_s
+{
+    
+};
 
 static char init_send[] = {
     0x30, 0x38, 0x48, 0x78, 0x4f, 0x39, 0x54, 0x64,

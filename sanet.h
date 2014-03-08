@@ -19,6 +19,7 @@
 
 #define S_IN_USE            S_2D_CENTRAL
 
+typedef struct connect_inst_s connect_inst_s;
 
 
 #endif
