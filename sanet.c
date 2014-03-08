@@ -15,6 +15,8 @@
 #define BUF_SIZE 1024
 #define LOGIN_FLAG "09"
 
+#define MAX_UNAME_PASS 20
+
 struct connect_inst_s
 {
     char *server;
@@ -89,10 +91,10 @@ int socket_(char *server)
 connect_inst_s *login(char *server, char *uname, char *pass)
 {
     int sock;
-    char buf[BUF_SIZE];
+    char buf[2*MAX_UNAME_PASS+5];
     connect_inst_s *c;
     
-    if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > BUF_SIZE) {
+    if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > 2*MAX_UNAME_PASS+5) {
         fprintf(stderr, "Input too large you retard\n");
         return NULL;
     }
