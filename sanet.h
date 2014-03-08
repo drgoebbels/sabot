@@ -21,5 +21,6 @@
 
 typedef struct connect_inst_s connect_inst_s;
 
+extern connect_inst_s *login(char *server, char *uname, char *pass);
 
 #endif
