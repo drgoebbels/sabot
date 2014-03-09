@@ -19,5 +19,6 @@ struct sha512_s
  */
 extern void sha512(void *message, size_t len, sha512_s *digest);
 
+extern void print_digest(sha512_s *digest);
 
 #endif

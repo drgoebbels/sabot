@@ -15,10 +15,10 @@ int main(int arc, char *argv[])
     //login(S_2D_CENTRAL, "greedy.jew", "omg");
     
     
-    store_account();
+    //store_account();
     
     sha512("bah", 3, &digest);
-
+    print_digest(&digest);
     
     exit(EXIT_SUCCESS);
 }
