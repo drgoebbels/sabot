@@ -31,12 +31,11 @@ void sha512(void *message, size_t len, sha512_s *digest)
 {
     unsigned i, j, t;
     uint8_t *msg = message;
-    size_t l = len*8, div, k, nblocks, r;
+    size_t l = len*8, div, k, nblocks;
     block_s *states, *stptr;
     uint64_t W[80];
     uint64_t *H = digest->word;
     uint64_t a, b, c, d, e, f, g, h, T1, T2;
-    
     static uint64_t K[80] = {
         0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
         0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
@@ -60,13 +59,6 @@ void sha512(void *message, size_t len, sha512_s *digest)
         0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
     };
     
-    r = (len + 1) % 128;
-    nblocks = (len + 1) / 128 + r;
-    
-    states = allocz(nblocks);
-    
-    div = (l / 1024) ? l % 1024 : l;
-    
     H[0] = 0x6a09e667f3bcc908lu;
     H[1] = 0xbb67ae8584caa73blu;
     H[2] = 0x3c6ef372fe94f82blu;
@@ -75,6 +67,13 @@ void sha512(void *message, size_t len, sha512_s *digest)
     H[5] = 0x9b05688c2b3e6c1flu;
     H[6] = 0x1f83d9abfb41bd6blu;
     H[7] = 0x5be0cd19137e2179lu;
+    
+    nblocks = (len + 1) / 128 + !!((len + 1) % 128);
+    
+    states = allocz(nblocks);
+    
+    div = (l / 1024) ? l % 1024 : l;
+    
     
     /* Solve for k such that l+1+k is congruent to 869 mod 1024 */
     k = (896-(div+1)) % 1024;
@@ -127,6 +126,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
         H[6] += g;
         H[7] += h;
     }
+    
 }
 
 inline void zero_block(block_s *block)
@@ -177,7 +177,7 @@ void print_digest(sha512_s *digest)
     unsigned i;
     uint8_t *p = (uint8_t *)digest->word;
     
-    for(i = 0; i < 128; i++, p++)
+    for(i = 0; i < 64; i++, p++)
         printf("%x", *p);
     
 }
