@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "crypt.h"
 #include "sanet.h"
@@ -15,9 +16,7 @@ int main(int arc, char *argv[])
     //login(S_2D_CENTRAL, "greedy.jew", "omg");
     
     
-    //store_account();
-    
-    sha512("bah", 3, &digest);
+    sha512(argv[1], strlen(argv[1]), &digest);
     print_digest(&digest);
     
     exit(EXIT_SUCCESS);
