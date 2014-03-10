@@ -70,7 +70,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
     H[7] = 0x5be0cd19137e2179llu;
     
     nblocks = (len + 1) / 128 + !!((len + 1) % 128);
-    states = allocz(nblocks);
+    states = allocz(nblocks * sizeof(*states));
     div = (l / 1024) ? l % 1024 : l;
     
     /* Solve for k such that l+1+k is congruent to 869 mod 1024 */
