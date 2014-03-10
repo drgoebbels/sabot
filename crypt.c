@@ -1,4 +1,8 @@
+/*
+ Reinventing the wheel for lulz
+ */
 #include <stdio.h>
+#include <string.h>
 
 #include "crypt.h"
 
@@ -12,12 +16,7 @@ struct block_s
     };
 };
 
-static sha512_s H0 = {
-    .word = {
-    }
-};
-
-static void zero_block(volatile block_s *block);
+static void zero_block(block_s * volatile block);
 
 static inline uint64_t Ch(uint64_t x, uint64_t y, uint64_t z);
 static inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z);
@@ -26,11 +25,13 @@ static inline uint64_t E_512_0(uint64_t x);
 static inline uint64_t E_512_1(uint64_t x);
 static inline uint64_t s_512_0(uint64_t x);
 static inline uint64_t s_512_1(uint64_t x);
+static void print_word(uint64_t w);
 
 void sha512(void *message, size_t len, sha512_s *digest)
 {
-    unsigned i, j, t;
+    unsigned i, t;
     uint8_t *msg = message;
+    uint8_t *bl;
     size_t l = len*8, div, k, nblocks;
     block_s *states, *stptr;
     uint64_t W[80];
@@ -69,11 +70,8 @@ void sha512(void *message, size_t len, sha512_s *digest)
     H[7] = 0x5be0cd19137e2179llu;
     
     nblocks = (len + 1) / 128 + !!((len + 1) % 128);
-    
     states = allocz(nblocks);
-    
     div = (l / 1024) ? l % 1024 : l;
-    
     
     /* Solve for k such that l+1+k is congruent to 869 mod 1024 */
     k = (896-(div+1)) % 1024;
@@ -81,61 +79,61 @@ void sha512(void *message, size_t len, sha512_s *digest)
     for(i = 0, stptr = states; i < len; i++) {
         if(!(i % 128) && i != 0)
             stptr++;
-        stptr->b[i] = msg[i];
+        stptr->b[i % 128] = msg[i];
     }
     
     if(!(i % 128) && i != 0)
         stptr++;
-    stptr->b[i] |= 0x0001;
-    stptr->word[15] = l;
+    stptr->b[i % 128] |= 0x80;
+    
+    /* Add size so that its representation is guaranteed to be big endian. */
+    bl = (uint8_t *)&l;
+    for(i = 0; i < sizeof(l); i++)
+        stptr->b[127-i] = bl[i];
     
     stptr = states;
-    for(i = 0; i < nblocks; i++, stptr++) {
-        for(j = 0; j < 16; j++)
-            W[j] = stptr->word[j];
-        while(j < 80) {
-            W[j] = s_512_1(W[j-2]) + W[j-7] + s_512_0(W[j-15]) + W[j-16];
-            j++;
+    for(i = 0; i < nblocks; i++) {
+        for(t = 0; t < 16; t++) {
+            W[t] = stptr->word[t];
+            printf("W%u=\t", t);
+            print_word(W[t]);
+        }
+        while(t < 80) {
+            W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
+            t++;
         }
         
-        a = H[0];
-        b = H[1];
-        c = H[2];
-        d = H[3];
-        e = H[4];
-        f = H[5];
-        g = H[6];
-        h = H[7];
+        a = H[0];   b = H[1];
+        c = H[2];   d = H[3];
+        e = H[4];   f = H[5];
+        g = H[6];   h = H[7];
        
         for(t = 0; t < 80; t++) {
             T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];
             T2 = E_512_0(a) + Maj(a, b, c);
-            h = g;
-            g = f;
-            f = e;
-            e = T1;
-            d = c;
-            c = b;
-            b = a;
-            a = T1 + T2;
+            h = g;  g = f;
+            f = e;  e = d + T1;
+            d = c;  c = b;
+            b = a;  a = T1 + T2;
+            printf("t=%u:\t%llx\t%llx\t%llx\n", t, a, b, e);
         }
         
-        H[0] += a;
-        H[1] += b;
-        H[2] += c;
-        H[3] += d;
-        H[4] += e;
-        H[5] += f;
-        H[6] += g;
-        H[7] += h;
+        H[0] += a;  H[1] += b;
+        H[2] += c;  H[3] += d;
+        H[4] += e;  H[5] += f;
+        H[6] += g;  H[7] += h;
     }
     stptr = states;
+    
+    /* Zero out plaintext from memory */
+    for(t = 0; t < 80; t++)
+        ((uint64_t volatile *)W)[t] = 0llu;
     for(i = 0; i < nblocks; i++, stptr++)
         zero_block(stptr);
     free(states);
 }
 
-void zero_block(volatile block_s *block)
+void zero_block(block_s * volatile block)
 {
     unsigned i;
     
@@ -145,7 +143,7 @@ void zero_block(volatile block_s *block)
 
 inline uint64_t Ch(uint64_t x, uint64_t y, uint64_t z)
 {
-    return (x & y) ^ (~x & z);
+    return (x & y) ^ (x & z);
 }
 
 inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z)
@@ -176,6 +174,17 @@ inline uint64_t s_512_0(uint64_t x)
 inline uint64_t s_512_1(uint64_t x)
 {
     return ROTRn(x, 19) ^ ROTRn(x, 61) ^ (x >> 6);
+}
+
+void print_word(uint64_t w)
+{
+    unsigned i;
+    uint8_t *b = (uint8_t *)&w;
+    
+    for(i = 0; i < sizeof(w); i++) {
+        printf("%02x", b[i]);
+    }
+    putchar('\n');
 }
 
 void print_digest(sha512_s *digest)
