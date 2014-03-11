@@ -20,11 +20,12 @@ static void zero_block(block_s * volatile block);
 
 static inline uint64_t Ch(uint64_t x, uint64_t y, uint64_t z);
 static inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z);
-static inline uint64_t ROTRn(uint64_t x, int n);
+static inline uint64_t ROTRn(uint64_t x, unsigned n);
 static inline uint64_t E_512_0(uint64_t x);
 static inline uint64_t E_512_1(uint64_t x);
 static inline uint64_t s_512_0(uint64_t x);
 static inline uint64_t s_512_1(uint64_t x);
+static inline uint64_t to_big_endian(uint64_t w);
 static void print_word(uint64_t w);
 
 void sha512(void *message, size_t len, sha512_s *digest)
@@ -59,6 +60,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
         0x28db77f523047d84llu, 0x32caab7b40c72493llu, 0x3c9ebe0a15c9bebcllu, 0x431d67c49c100d4cllu,
         0x4cc5d4becb3e42b6llu, 0x597f299cfc657e2allu, 0x5fcb6fab3ad6faecllu, 0x6c44198c4a475817llu
     };
+    
     
     H[0] = 0x6a09e667f3bcc908llu;
     H[1] = 0xbb67ae8584caa73bllu;
@@ -151,7 +153,7 @@ inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z)
     return (x & y) ^ (x & z) ^ (y & z);
 }
 
-inline uint64_t ROTRn(uint64_t x, int n)
+inline uint64_t ROTRn(uint64_t x, unsigned n)
 {
     return (x >> n) | (x << (64 - n));
 }
@@ -174,6 +176,22 @@ inline uint64_t s_512_0(uint64_t x)
 inline uint64_t s_512_1(uint64_t x)
 {
     return ROTRn(x, 19) ^ ROTRn(x, 61) ^ (x >> 6);
+}
+
+inline uint64_t to_big_endian(uint64_t w)
+{
+    uint64_t res;
+    uint8_t *pres = (uint8_t *)&res;
+    
+    pres[0] = w >> 56;
+    pres[1] = w >> 48;
+    pres[2] = w >> 40;
+    pres[3] = w >> 32;
+    pres[4] = w >> 24;
+    pres[5] = w >> 16;
+    pres[6] = w >> 8;
+    pres[7] = w;
+    return res;
 }
 
 void print_word(uint64_t w)
