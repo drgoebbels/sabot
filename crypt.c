@@ -30,7 +30,7 @@ static void print_word(uint64_t w);
 
 void sha512(void *message, size_t len, sha512_s *digest)
 {
-    unsigned i, t;
+    unsigned i, t, j;
     uint8_t *msg = message;
     uint8_t *bl;
     size_t l = len*8, div, k, nblocks;
@@ -38,7 +38,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
     uint64_t W[80];
     uint64_t *H = digest->word;
     uint64_t a, b, c, d, e, f, g, h, T1, T2;
-    static uint64_t K[80] = {
+    static const uint64_t K[80] = {
         0x428a2f98d728ae22llu, 0x7137449123ef65cdllu, 0xb5c0fbcfec4d3b2fllu, 0xe9b5dba58189dbbcllu,
         0x3956c25bf348b538llu, 0x59f111f1b605d019llu, 0x923f82a4af194f9bllu, 0xab1c5ed5da6d8118llu,
         0xd807aa98a3030242llu, 0x12835b0145706fbellu, 0x243185be4ee4b28cllu, 0x550c7dc3d5ffb4e2llu,
@@ -94,9 +94,9 @@ void sha512(void *message, size_t len, sha512_s *digest)
         stptr->b[127-i] = bl[i];
     
     stptr = states;
-    for(i = 0; i < nblocks; i++) {
+    for(i = 0; i < nblocks; i++, stptr++) {
         for(t = 0; t < 16; t++) {
-            W[t] = stptr->word[t];
+            W[t] = to_big_endian(stptr->word[t]);
             printf("W%u=\t", t);
             print_word(W[t]);
         }
@@ -109,7 +109,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
         c = H[2];   d = H[3];
         e = H[4];   f = H[5];
         g = H[6];   h = H[7];
-       
+
         for(t = 0; t < 80; t++) {
             T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];
             T2 = E_512_0(a) + Maj(a, b, c);
@@ -117,9 +117,9 @@ void sha512(void *message, size_t len, sha512_s *digest)
             f = e;  e = d + T1;
             d = c;  c = b;
             b = a;  a = T1 + T2;
-            printf("t=%u:\t%llx\t%llx\t%llx\n", t, a, b, e);
+            printf("t=%u:\t%llx\t%llx\t%llx\t%llx\n\t%llx\t%llx\t%llx\t%llx\n", t, a, b, c, d, e, f, g, h);
         }
-        
+
         H[0] += a;  H[1] += b;
         H[2] += c;  H[3] += d;
         H[4] += e;  H[5] += f;
@@ -145,7 +145,7 @@ void zero_block(block_s * volatile block)
 
 inline uint64_t Ch(uint64_t x, uint64_t y, uint64_t z)
 {
-    return (x & y) ^ (x & z);
+    return (x & y) ^ (~x & z);
 }
 
 inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z)
@@ -208,10 +208,10 @@ void print_word(uint64_t w)
 void print_digest(sha512_s *digest)
 {
     unsigned i;
-    uint8_t *p = (uint8_t *)digest->word;
+    uint64_t *p = (uint64_t *)digest->word;
     
-    for(i = 0; i < 64; i++, p++)
-        printf("%x", *p);
+    for(i = 0; i < 8; i++, p++)
+        printf("%llx ", *p);
     
 }
 
