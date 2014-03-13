@@ -7,7 +7,7 @@
 #include "sanet.h"
 #include "database.h"
 
-#define N_TESTS 999999
+#define N_TESTS 1999999
 
 int main(int arc, char *argv[])
 {

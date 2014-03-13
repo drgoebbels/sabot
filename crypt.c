@@ -28,22 +28,6 @@ static inline uint64_t s_512_1(uint64_t x);
 static inline uint64_t to_big_endian(uint64_t w);
 static void print_word(uint64_t w);
 
-/*
- 
- abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu
- */
-
-#define INNER_ROUND()   T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];    \
-                        T2 = E_512_0(a) + Maj(a, b, c); \
-                        h = g;  g = f;  \
-                        f = e;  e = d + T1; \
-                        d = c;  c = b;  \
-                        b = a;  a = T1 + T2;    \
-                        t++
-
-#define ZERO_WORD()     ((uint64_t volatile *)W)[t] = 0llu; \
-                        t++
-
 
 
 void sha512(void *message, size_t len, sha512_s *digest)
@@ -137,14 +121,24 @@ void sha512(void *message, size_t len, sha512_s *digest)
         e = H[4];   f = H[5];
         g = H[6];   h = H[7];
 
+#define INNER_ROUND()   T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];    \
+                        T2 = E_512_0(a) + Maj(a, b, c); \
+                        h = g;  g = f;  \
+                        f = e;  e = d + T1; \
+                        d = c;  c = b;  \
+                        b = a;  a = T1 + T2;    \
+                        t++
+    
         /* Many tests showed some loop unravelling brought performance increase */
-        for(t = 0; t < 80; ) {
+        t = 0;
+        while(t < 80) {
             INNER_ROUND();
             INNER_ROUND();
             INNER_ROUND();
             INNER_ROUND();
             //printf("t=%u:\t%llx\t%llx\t%llx\t%llx\n\t%llx\t%llx\t%llx\t%llx\n", t, a, b, c, d, e, f, g, h);
         }
+#undef INNER_ROUND
 
         H[0] += a;  H[1] += b;
         H[2] += c;  H[3] += d;
@@ -154,12 +148,14 @@ void sha512(void *message, size_t len, sha512_s *digest)
     stptr = states;
     
     /* Zero out plaintext from memory */
-    t = 0;
-    while(t < 80) {
-        ZERO_WORD();
-        ZERO_WORD();
-        ZERO_WORD();
-        ZERO_WORD();
+    for(t = 0; t < 80; t++) {
+        ((uint64_t volatile *)W)[t] = 0llu;
+        t++;
+        ((uint64_t volatile *)W)[t] = 0llu;
+        t++;
+        ((uint64_t volatile *)W)[t] = 0llu;
+        t++;
+        ((uint64_t volatile *)W)[t] = 0llu;
     }
     for(i = 0; i < nblocks; i++)
         zero_block(&stptr[i]);
