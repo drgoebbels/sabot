@@ -28,11 +28,28 @@ static inline uint64_t s_512_1(uint64_t x);
 static inline uint64_t to_big_endian(uint64_t w);
 static void print_word(uint64_t w);
 
+/*
+ 
+ abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu
+ */
+
+#define INNER_ROUND()   T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];    \
+                        T2 = E_512_0(a) + Maj(a, b, c); \
+                        h = g;  g = f;  \
+                        f = e;  e = d + T1; \
+                        d = c;  c = b;  \
+                        b = a;  a = T1 + T2;    \
+                        t++
+
+#define ZERO_WORD()     ((uint64_t volatile *)W)[t] = 0llu; \
+                        t++
+
+
+
 void sha512(void *message, size_t len, sha512_s *digest)
 {
-    unsigned i, t, j;
+    unsigned i, t;
     uint8_t *msg = message;
-    uint8_t *bl;
     size_t l = len*8, div, k, nblocks;
     block_s *states, *stptr;
     uint64_t W[80];
@@ -89,18 +106,28 @@ void sha512(void *message, size_t len, sha512_s *digest)
     stptr->b[i % 128] |= 0x80;
     
     /* Add size so that its representation is guaranteed to be big endian. */
-    bl = (uint8_t *)&l;
-    for(i = 0; i < sizeof(l); i++)
-        stptr->b[127-i] = bl[i];
+    stptr->b[127] = l;
+    stptr->b[126] = l >> 8;
+    stptr->b[125] = l >> 24;
+    stptr->b[124] = l >> 32;
+    stptr->b[123] = l >> 40;
+    stptr->b[122] = l >> 48;
+    stptr->b[121] = l >> 56;
     
     stptr = states;
     for(i = 0; i < nblocks; i++, stptr++) {
         for(t = 0; t < 16; t++) {
             W[t] = to_big_endian(stptr->word[t]);
-            printf("W%u=\t", t);
-            print_word(W[t]);
+            //printf("W%u=\t", t);
+            //print_word(W[t]);
         }
         while(t < 80) {
+            W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
+            t++;
+            W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
+            t++;
+            W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
+            t++;
             W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
             t++;
         }
@@ -110,14 +137,13 @@ void sha512(void *message, size_t len, sha512_s *digest)
         e = H[4];   f = H[5];
         g = H[6];   h = H[7];
 
-        for(t = 0; t < 80; t++) {
-            T1 = h + E_512_1(e) + Ch(e, f, g) + K[t] + W[t];
-            T2 = E_512_0(a) + Maj(a, b, c);
-            h = g;  g = f;
-            f = e;  e = d + T1;
-            d = c;  c = b;
-            b = a;  a = T1 + T2;
-            printf("t=%u:\t%llx\t%llx\t%llx\t%llx\n\t%llx\t%llx\t%llx\t%llx\n", t, a, b, c, d, e, f, g, h);
+        /* Many tests showed some loop unravelling brought performance increase */
+        for(t = 0; t < 80; ) {
+            INNER_ROUND();
+            INNER_ROUND();
+            INNER_ROUND();
+            INNER_ROUND();
+            //printf("t=%u:\t%llx\t%llx\t%llx\t%llx\n\t%llx\t%llx\t%llx\t%llx\n", t, a, b, c, d, e, f, g, h);
         }
 
         H[0] += a;  H[1] += b;
@@ -128,10 +154,15 @@ void sha512(void *message, size_t len, sha512_s *digest)
     stptr = states;
     
     /* Zero out plaintext from memory */
-    for(t = 0; t < 80; t++)
-        ((uint64_t volatile *)W)[t] = 0llu;
-    for(i = 0; i < nblocks; i++, stptr++)
-        zero_block(stptr);
+    t = 0;
+    while(t < 80) {
+        ZERO_WORD();
+        ZERO_WORD();
+        ZERO_WORD();
+        ZERO_WORD();
+    }
+    for(i = 0; i < nblocks; i++)
+        zero_block(&stptr[i]);
     free(states);
 }
 
@@ -181,7 +212,7 @@ inline uint64_t s_512_1(uint64_t x)
 inline uint64_t to_big_endian(uint64_t w)
 {
     uint64_t res;
-    uint8_t *pres = (uint8_t *)&res;
+    register uint8_t *pres = (uint8_t *)&res;
     
     pres[0] = w >> 56;
     pres[1] = w >> 48;
