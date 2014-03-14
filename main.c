@@ -7,7 +7,7 @@
 #include "sanet.h"
 #include "database.h"
 
-#define N_TESTS 1
+#define N_TESTS 1000
 
 int main(int arc, char *argv[])
 {

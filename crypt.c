@@ -102,8 +102,6 @@ void sha512(void *message, size_t len, sha512_s *digest)
         i++;
     }
 
-    printf("nbits %ld\n", l);
-    //assert(stptr != states);
     /* Add size so that its representation is guaranteed to be big endian. */
     stptr->b[127] = l;
     stptr->b[126] = l >> 8;
@@ -115,16 +113,8 @@ void sha512(void *message, size_t len, sha512_s *digest)
     
     stptr = states;
     for(i = 0; i < nblocks; i++, stptr++) {
-        for(t = 0; t < 128 && consumed < len; t++, consumed++) {
-            state.b[t] = msg[consumed];
-        }
-        if(t != 128) {
-            
-        }
         for(t = 0; t < 16; t++) {
             W[t] = to_big_endian(stptr->word[t]);
-            printf("W%u=\t", t);
-            print_word(W[t]);
         }
         while(t < 80) {
             W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
