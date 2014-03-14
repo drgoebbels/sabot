@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include "crypt.h"
 
@@ -31,11 +32,10 @@ static void print_word(uint64_t w);
 
 void sha512(void *message, size_t len, sha512_s *digest)
 {
-    unsigned i, t, consumed = 0;
+    unsigned i, t;
     uint8_t *msg = message;
-    size_t l = len*8, div, k, nblocks, nbytes;
+    size_t l = len*8, k, nblocks, nbytes;
     block_s *states, *stptr;
-    block_s state;
     uint64_t W[80];
     uint64_t *H = digest->word;
     uint64_t a, b, c, d, e, f, g, h, T1, T2;
@@ -62,7 +62,6 @@ void sha512(void *message, size_t len, sha512_s *digest)
         0x4cc5d4becb3e42b6llu, 0x597f299cfc657e2allu, 0x5fcb6fab3ad6faecllu, 0x6c44198c4a475817llu
     };
     
-    
     H[0] = 0x6a09e667f3bcc908llu;
     H[1] = 0xbb67ae8584caa73bllu;
     H[2] = 0x3c6ef372fe94f82bllu;
@@ -73,15 +72,10 @@ void sha512(void *message, size_t len, sha512_s *digest)
     H[7] = 0x5be0cd19137e2179llu;
     
     /*
-     
-     abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu
-     */
-    
-    /*
-        l+1+ k =~ 896 mod 1024
+        Padding -Solve for k such that l+1+k is congruent to 896 mod 1024
      */
     k = (896 - (l + 1))%1024;
-    nbytes = (l + 1 + k + 128)/8 + !!((l + 1 + k + 128)%8);
+    nbytes = (l + 1 + k + 128)/8 + !!((l + 1 + k + 128) % 8);
     nblocks = nbytes/128 + !!(nbytes % 128);
 
     states = allocz(nblocks * sizeof(*states));
@@ -147,7 +141,6 @@ void sha512(void *message, size_t len, sha512_s *digest)
             INNER_ROUND();
             INNER_ROUND();
             INNER_ROUND();
-            //printf("t=%u:\t%llx\t%llx\t%llx\t%llx\n\t%llx\t%llx\t%llx\t%llx\n", t, a, b, c, d, e, f, g, h);
         }
 #undef INNER_ROUND
 
@@ -251,5 +244,39 @@ void print_digest(sha512_s *digest)
     for(i = 0; i < 8; i++, p++)
         printf("%llx ", *p);
     
+}
+
+int sha512_equal(sha512_s *d1, sha512_s *d2)
+{
+    unsigned i;
+    uint64_t *a = d1->word, *b = d2->word;
+    
+    for(i = 0; i < sizeof(d1->word)/sizeof(uint64_t); i++) {
+        if(*a++ != *b++)
+            return 0;
+    }
+    return 1;
+}
+
+/*
+ Salt generator
+ ,,|,, standards
+ */
+salt_s get_salt(void)
+{
+    salt_s salt;
+    
+    srand((int)time(NULL));
+    
+    /*
+     rand() tends to ignore the signed bit, so 
+     we must be thorough
+     */
+    salt.quad[0] = rand();
+    salt.quad[1] = rand();
+    salt.quad[2] = rand();
+    salt.quad[3] = rand();
+    
+    return salt;
 }
 

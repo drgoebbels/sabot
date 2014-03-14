@@ -6,10 +6,18 @@
 #include "general.h"
 
 typedef struct sha512_s sha512_s;
+typedef union salt_s salt_s;
 
 struct sha512_s
 {
     uint64_t word[8];
+};
+
+union salt_s
+{
+    uint64_t whole;
+    uint16_t quad[4];
+    uint8_t oct[8];
 };
 
 /*
@@ -19,6 +27,10 @@ struct sha512_s
  */
 extern void sha512(void *message, size_t len, sha512_s *digest);
 
+extern int sha512_equal(sha512_s *d1, sha512_s *d2);
+
 extern void print_digest(sha512_s *digest);
+
+extern salt_s get_salt(void);
 
 #endif

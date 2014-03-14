@@ -19,14 +19,15 @@ int main(int arc, char *argv[])
     sha512_s digest;
     //login(S_2D_CENTRAL, "greedy.jew", "omg");
     
-    
-    for(i = 0; i < N_TESTS; i++) {
+    //store_account();
+    authenticate();
+    /*for(i = 0; i < N_TESTS; i++) {
         time = clock();
         sha512(argv[1], strlen(argv[1]), &digest);
         accum += (clock() - time);
     }
     
-    print_digest(&digest);
+    print_digest(&digest);*/
     printf("\naverage time: %f ticks\n", accum/(double)N_TESTS);
     
     exit(EXIT_SUCCESS);
