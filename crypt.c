@@ -3,6 +3,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "crypt.h"
 
@@ -16,7 +17,7 @@ struct block_s
     };
 };
 
-static void zero_block(block_s * volatile block);
+static void zero_block(volatile block_s *block);
 
 static inline uint64_t Ch(uint64_t x, uint64_t y, uint64_t z);
 static inline uint64_t Maj(uint64_t x, uint64_t y, uint64_t z);
@@ -28,14 +29,13 @@ static inline uint64_t s_512_1(uint64_t x);
 static inline uint64_t to_big_endian(uint64_t w);
 static void print_word(uint64_t w);
 
-
-
 void sha512(void *message, size_t len, sha512_s *digest)
 {
-    unsigned i, t;
+    unsigned i, t, consumed = 0;
     uint8_t *msg = message;
-    size_t l = len*8, div, k, nblocks;
+    size_t l = len*8, div, k, nblocks, nbytes;
     block_s *states, *stptr;
+    block_s state;
     uint64_t W[80];
     uint64_t *H = digest->word;
     uint64_t a, b, c, d, e, f, g, h, T1, T2;
@@ -72,23 +72,38 @@ void sha512(void *message, size_t len, sha512_s *digest)
     H[6] = 0x1f83d9abfb41bd6bllu;
     H[7] = 0x5be0cd19137e2179llu;
     
-    nblocks = (len + 1) / 128 + !!((len + 1) % 128);
-    states = allocz(nblocks * sizeof(*states));
-    div = (l / 1024) ? l % 1024 : l;
+    /*
+     
+     abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu
+     */
     
-    /* Solve for k such that l+1+k is congruent to 869 mod 1024 */
-    k = (896-(div+1)) % 1024;
+    /*
+        l+1+ k =~ 896 mod 1024
+     */
+    k = (896 - (l + 1))%1024;
+    nbytes = (l + 1 + k + 128)/8 + !!((l + 1 + k + 128)%8);
+    nblocks = nbytes/128 + !!(nbytes % 128);
+
+    states = allocz(nblocks * sizeof(*states));
     
     for(i = 0, stptr = states; i < len; i++) {
         if(!(i % 128) && i != 0)
             stptr++;
         stptr->b[i % 128] = msg[i];
     }
-    
-    if(!(i % 128) && i != 0)
+    if(!(i % 128) && i != 0) {
         stptr++;
+    }
     stptr->b[i % 128] |= 0x80;
-    
+    i++;
+    while(i < nbytes) {
+        if(!(i % 128) && i != 0)
+            stptr++;
+        i++;
+    }
+
+    printf("nbits %ld\n", l);
+    //assert(stptr != states);
     /* Add size so that its representation is guaranteed to be big endian. */
     stptr->b[127] = l;
     stptr->b[126] = l >> 8;
@@ -100,10 +115,16 @@ void sha512(void *message, size_t len, sha512_s *digest)
     
     stptr = states;
     for(i = 0; i < nblocks; i++, stptr++) {
+        for(t = 0; t < 128 && consumed < len; t++, consumed++) {
+            state.b[t] = msg[consumed];
+        }
+        if(t != 128) {
+            
+        }
         for(t = 0; t < 16; t++) {
             W[t] = to_big_endian(stptr->word[t]);
-            //printf("W%u=\t", t);
-            //print_word(W[t]);
+            printf("W%u=\t", t);
+            print_word(W[t]);
         }
         while(t < 80) {
             W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
@@ -129,7 +150,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
                         b = a;  a = T1 + T2;    \
                         t++
     
-        /* Many tests showed some loop unravelling brought performance increase */
+        /* Many tests showed some loop unrolling brought performance increase */
         t = 0;
         while(t < 80) {
             INNER_ROUND();
@@ -149,20 +170,20 @@ void sha512(void *message, size_t len, sha512_s *digest)
     
     /* Zero out plaintext from memory */
     for(t = 0; t < 80; t++) {
-        ((uint64_t volatile *)W)[t] = 0llu;
+        ((volatile uint64_t *)W)[t] = 0llu;
         t++;
-        ((uint64_t volatile *)W)[t] = 0llu;
+        ((volatile uint64_t *)W)[t] = 0llu;
         t++;
-        ((uint64_t volatile *)W)[t] = 0llu;
+        ((volatile uint64_t *)W)[t] = 0llu;
         t++;
-        ((uint64_t volatile *)W)[t] = 0llu;
+        ((volatile uint64_t *)W)[t] = 0llu;
     }
     for(i = 0; i < nblocks; i++)
         zero_block(&stptr[i]);
     free(states);
 }
 
-void zero_block(block_s * volatile block)
+void zero_block(volatile block_s *block)
 {
     unsigned i;
     
@@ -208,7 +229,7 @@ inline uint64_t s_512_1(uint64_t x)
 inline uint64_t to_big_endian(uint64_t w)
 {
     uint64_t res;
-    register uint8_t *pres = (uint8_t *)&res;
+    uint8_t *pres = (uint8_t *)&res;
     
     pres[0] = w >> 56;
     pres[1] = w >> 48;
