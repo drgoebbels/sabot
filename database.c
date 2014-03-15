@@ -100,6 +100,8 @@ void authenticate(void)
     sha512_s hashed, attempt;
     char pass[MAX_UNAME+sizeof(salt)+1];
     
+    memset(pass, 0, sizeof(pass));
+    
     f = fopen(PASS_FILE, "r");
     if(!f) {
         perror("Error opening password file");

@@ -61,7 +61,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
         0x28db77f523047d84llu, 0x32caab7b40c72493llu, 0x3c9ebe0a15c9bebcllu, 0x431d67c49c100d4cllu,
         0x4cc5d4becb3e42b6llu, 0x597f299cfc657e2allu, 0x5fcb6fab3ad6faecllu, 0x6c44198c4a475817llu
     };
-        
+    
     H[0] = 0x6a09e667f3bcc908llu;
     H[1] = 0xbb67ae8584caa73bllu;
     H[2] = 0x3c6ef372fe94f82bllu;
