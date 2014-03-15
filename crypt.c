@@ -62,6 +62,8 @@ void sha512(void *message, size_t len, sha512_s *digest)
         0x4cc5d4becb3e42b6llu, 0x597f299cfc657e2allu, 0x5fcb6fab3ad6faecllu, 0x6c44198c4a475817llu
     };
     
+    printf("About to hash %s\n", (char *)message);
+    
     H[0] = 0x6a09e667f3bcc908llu;
     H[1] = 0xbb67ae8584caa73bllu;
     H[2] = 0x3c6ef372fe94f82bllu;
@@ -96,7 +98,10 @@ void sha512(void *message, size_t len, sha512_s *digest)
         i++;
     }
 
-    /* Add size so that its representation is guaranteed to be big endian. */
+    /* 
+     Add size so that its representation is guaranteed to be big endian. 
+     Size does not conform to standards since a 128-bit integer is required.
+     */
     stptr->b[127] = l;
     stptr->b[126] = l >> 8;
     stptr->b[125] = l >> 24;

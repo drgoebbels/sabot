@@ -17,6 +17,7 @@
 
 static void getpassword(char *buf, size_t max);
 
+
 void store_account(void)
 {
     uint64_t *s;
@@ -28,6 +29,8 @@ void store_account(void)
     char uname[MAX_UNAME+sizeof(salt)+1], pass[MAX_UNAME+1];
     volatile uint64_t *ptr = (uint64_t *)pass;
     
+    memset(pass, 0, sizeof(pass));
+    
     puts("Enter Username");
     status = fgets(uname, MAX_UNAME, stdin);
     if(!status) {
@@ -37,6 +40,8 @@ void store_account(void)
     puts("Enter password");
     getpassword(pass, MAX_UNAME);
     len = strlen(pass);
+    
+    //printf("%ld\n", len);
     
     salt = get_salt();
     s = (uint64_t *)&pass[len-1];
@@ -102,6 +107,8 @@ void authenticate(void)
     
     getpassword(pass, MAX_UNAME);
     len = strlen(pass);
+    
+    //printf("%ld\n",len);
     
     s = (uint64_t *)&pass[len-1];
     *s = salt.whole;
