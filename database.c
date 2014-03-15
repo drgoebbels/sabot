@@ -31,12 +31,16 @@ void store_account(void)
     
     memset(pass, 0, sizeof(pass));
     
+    
+    
     puts("Enter Username");
     status = fgets(uname, MAX_UNAME, stdin);
     if(!status) {
         perror("Error Reading Username");
         exit(EXIT_FAILURE);
     }
+    
+    
     puts("Enter password");
     getpassword(pass, MAX_UNAME);
     len = strlen(pass);
