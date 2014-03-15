@@ -1,5 +1,8 @@
 /*
  Reinventing the wheel for lulz
+ 
+ sha512 implementation as specified by nist. Not entirely compliant due to lack
+ of support of 128-bit message lengths.
  */
 #include <stdio.h>
 #include <string.h>
@@ -259,6 +262,20 @@ int sha512_equal(sha512_s *d1, sha512_s *d2)
             return 0;
     }
     return 1;
+}
+
+void PBKDF(char *pass, salt_s salt, unsigned C, size_t kLen)
+{
+    unsigned i, Ti, U0;
+    size_t r, len;
+    
+    len = (kLen / sizeof(uint64_t[8])) + !!(kLen / sizeof(uint64_t[8]));
+    r = kLen - (len - 1) * (sizeof(uint64_t[8]));
+    
+    for(i = 1; i <= len; i++) {
+        Ti = 0;
+        //U0 =
+    }
 }
 
 /*

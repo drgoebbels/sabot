@@ -19,8 +19,11 @@ int main(int arc, char *argv[])
     sha512_s digest;
     //login(S_2D_CENTRAL, "greedy.jew", "omg");
     
-    store_account();
-    authenticate();
+    sha512(argv[1], strlen(argv[1]), &digest);
+
+    print_digest(&digest);
+    //store_account();
+    //authenticate();
     /*for(i = 0; i < N_TESTS; i++) {
         time = clock();
         sha512(argv[1], strlen(argv[1]), &digest);

@@ -28,9 +28,8 @@ void store_account(void)
     char uname[MAX_UNAME+sizeof(salt)+1], pass[MAX_UNAME+1];
     volatile uint64_t *ptr = (uint64_t *)pass;
     
-    memset(pass, 0, sizeof(pass));
-    
-    
+    //only needed to suppress valgrind warnings
+    //memset(pass, 0, sizeof(pass));
     
     puts("Enter Username");
     status = fgets(uname, MAX_UNAME, stdin);
@@ -39,12 +38,11 @@ void store_account(void)
         exit(EXIT_FAILURE);
     }
     
-    
     puts("Enter password");
     len = getpassword(pass, MAX_UNAME);
     
     salt = get_salt();
-    s = (uint64_t *)&pass[len-1];
+    s = (uint64_t *)&pass[len];
     *s = salt.whole;
     
     sha512(pass, len + sizeof(uint64_t), &digest);
@@ -100,7 +98,8 @@ void authenticate(void)
     sha512_s hashed, attempt;
     char pass[MAX_UNAME+sizeof(salt)+1];
     
-    memset(pass, 0, sizeof(pass));
+    //only needed to suppress valgrind warnings
+   // memset(pass, 0, sizeof(pass));
     
     f = fopen(PASS_FILE, "r");
     if(!f) {
@@ -115,9 +114,7 @@ void authenticate(void)
     
     len = getpassword(pass, MAX_UNAME);
     
-    //printf("%ld\n",len);
-    
-    s = (uint64_t *)&pass[len-1];
+    s = (uint64_t *)&pass[len];
     *s = salt.whole;
     
     sha512(pass, len + sizeof(salt), &attempt);

@@ -31,7 +31,7 @@ extern int sha512_equal(sha512_s *d1, sha512_s *d2);
 
 extern void print_digest(sha512_s *digest);
 
-//extern void PBKDF(char *pass, salt_s salt, unsigned C, size_t kLen
+extern void PBKDF(char *pass, salt_s salt, unsigned C, size_t kLen);
 
 extern salt_s get_salt(void);
 
