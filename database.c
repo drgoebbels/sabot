@@ -15,8 +15,7 @@
 
 #define MAX_UNAME 20
 
-static void getpassword(char *buf, size_t max);
-
+static size_t getpassword(char *buf, size_t max);
 
 void store_account(void)
 {
@@ -42,10 +41,7 @@ void store_account(void)
     
     
     puts("Enter password");
-    getpassword(pass, MAX_UNAME);
-    len = strlen(pass);
-    
-    //printf("%ld\n", len);
+    len = getpassword(pass, MAX_UNAME);
     
     salt = get_salt();
     s = (uint64_t *)&pass[len-1];
@@ -68,25 +64,31 @@ void store_account(void)
     fclose(f);
 }
 
-void getpassword(char *buf, size_t max)
+size_t getpassword(char *buf, size_t max)
 {
     char *status;
     struct termios old, new;
     
     if (tcgetattr(fileno(stdin), &old) != 0) {
         perror("Failed to turn off echo for password");
-        return;
+        return 0;
     }
     new = old;
     new.c_lflag &= ~ECHO;
     if (tcsetattr(fileno(stdin), TCSAFLUSH, &new) != 0) {
         perror("Failed to turn off echo for password");
     }
-    status = fgets(buf, MAX_UNAME, stdin);
+    status = fgets(buf, (int)max, stdin);
+    
     if(!status) {
         perror("Error Reading Password");
     }
+    
+    while(*status != '\n') status++;
+    *status = '\0';
+    
     tcsetattr(fileno(stdin), TCSAFLUSH, &old);
+    return status-buf;
 }
 
 void authenticate(void)
@@ -109,8 +111,7 @@ void authenticate(void)
     
     fclose(f);
     
-    getpassword(pass, MAX_UNAME);
-    len = strlen(pass);
+    len = getpassword(pass, MAX_UNAME);
     
     //printf("%ld\n",len);
     
