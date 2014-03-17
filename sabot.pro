@@ -9,7 +9,7 @@ QT       += core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = sabot
-TEMPLATE = app
+TEMPLATE = app lib
 
 
 SOURCES += main.cpp\
@@ -17,13 +17,17 @@ SOURCES += main.cpp\
         crypt.c\
         database.c\
         sanet.c\
-        general.c
+        general.c \
+    messagelist.cpp
 
 HEADERS  += mainwindow.h\
             crypt.h\
             database.h\
-            sanet.h
+            sanet.h \
+    messagelist.h
 
 FORMS    += mainwindow.ui
 
-CONFIG += console
+
+QT += designer
+CONFIG += console plugin

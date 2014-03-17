@@ -14,16 +14,6 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QListWidget" name="messageList">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>10</y>
-      <width>691</width>
-      <height>381</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QPlainTextEdit" name="messageBox">
     <property name="geometry">
      <rect>
