@@ -3,7 +3,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -17,13 +16,10 @@
 
 #define MAX_UNAME_PASS 20
 
-struct connect_inst_s
-{
-    char *server;
-    char *uname;
-    int sock;
-    pthread_t thread;
-};
+connect_inst_s *connlist;
+monitor_s monitor;
+
+static connect_inst_s *connlist_tail;
 
 /* Initial Packet Sent when logging in */
 static char init_send[] = {
@@ -49,6 +45,7 @@ static char finish_login[] = {
 
 static int socket_(char *server);
 static void connect_thread(connect_inst_s *c);
+static void add_connection(connect_inst_s *c);
 
 int socket_(char *server)
 {
@@ -92,16 +89,15 @@ connect_inst_s *login(char *server, char *uname, char *pass)
 {
     int sock;
     char buf[2*MAX_UNAME_PASS+5];
-    connect_inst_s *c;
+    connect_inst_s *conn;
     
     if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > 2*MAX_UNAME_PASS+5) {
         fprintf(stderr, "Input too large you retard\n");
         return NULL;
     }
     
-    c = alloc(sizeof(*c));
-    c->server = server;
     sock = socket_(server);
+    
     
     send(sock, init_send, sizeof(init_send), 0);
     recv(sock, buf, sizeof(buf), 0);
@@ -115,26 +111,51 @@ connect_inst_s *login(char *server, char *uname, char *pass)
     send(sock, ack_x2, sizeof(ack_x2), 0);
     send(sock, finish_login, sizeof(finish_login), 0);
     recv(sock, buf, sizeof(buf), 0);
-    pthread_create(&c->thread, NULL, (void *(*)(void *))connect_thread, c);
     
-    pthread_join(c->thread, NULL);
+    conn = alloc(sizeof(*conn));
+    conn->server = server;
+    conn->sock = sock;
+    conn->chat.head = NULL;
+    conn->chat.tail = NULL;
+    pthread_mutex_init(&conn->chat.lock, NULL);
+        
+    add_connection(conn);
     
-    return c;
+    pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
+    
+    pthread_join(conn->thread, NULL);
+    
+    return conn;
 }
 
 void connect_thread(connect_inst_s *c)
 {
-    unsigned i;
     ssize_t len;
     int sock = c->sock;
     char buf[BUF_SIZE];
+    chat_packet_s *packet;    
     
     while(1) {
         send(sock, ack_x1, sizeof(ack_x2), 0);
         len = recv(sock, buf, sizeof(buf), 0);
         
-        for(i = 0; i < len; i++)
-            putchar(buf[i]);
-        putchar('\n');
+        packet = alloc(sizeof(*packet));
+        packet->data = alloc(len);
+        memcpy(packet->data, buf, len);
+        
+        if(monitor.inuse) {
+            pthread_mutex_lock(&monitor.lock);
+            pthread_cond_signal(&monitor.cond);
+        }
+        
     }
+}
+
+void add_connection(connect_inst_s *c)
+{
+    if(connlist)
+        connlist_tail->next = c;
+    else
+        connlist = c;
+    connlist_tail = c;
 }

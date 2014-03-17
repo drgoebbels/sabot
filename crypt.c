@@ -289,8 +289,9 @@ salt_s get_salt(void)
     srand((int)time(NULL));
     
     /*
-     rand() tends to ignore the signed bit, so 
-     we must be thorough
+     rand() tends to ignore the signed bit despite it returning
+     type 'int'. Assign only the lower 16 bits in 4ths for
+     better entropy.
      */
     salt.quad[0] = rand();
     salt.quad[1] = rand();

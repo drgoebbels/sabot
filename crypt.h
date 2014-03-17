@@ -1,6 +1,10 @@
 #ifndef CRYPT_H_
 #define CRYPT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #include "general.h"
@@ -34,5 +38,9 @@ extern void print_digest(sha512_s *digest);
 extern void PBKDF(char *pass, salt_s salt, unsigned C, size_t kLen);
 
 extern salt_s get_salt(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
