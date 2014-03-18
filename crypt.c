@@ -622,13 +622,9 @@ aes_digest_s *aes_encrypt(void *message, size_t len)
 
 #ifndef STATIC_RCON
     unsigned i;
-    uint8_t b = 0x8d;
-    
     if(!rcon[0].b[0])
-    for (i = 0; i < 256; i++) {
-        b = xtime(b);
-        rcon[i].b[0] = b;
-    }
+    for (i = 1, rcon[0].b[0] = 1; i < 256; i++)
+        rcon[i].b[0] = xtime(rcon[i-1].b[0]);
 #endif
     
     return digest;
