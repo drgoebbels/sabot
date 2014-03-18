@@ -1,5 +1,9 @@
 #include "messagelist.h"
 
-MessageList::MessageList()
+
+MessageList::MessageList(QObject *parent)
+    : QListWidget()
 {
+
 }
+

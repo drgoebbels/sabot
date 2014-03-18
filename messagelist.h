@@ -3,11 +3,15 @@
 
 #include <QtWidgets/QListWidget>
 #include <QDesignerCustomWidgetInterface>
+#include <QObject>
 
-class MessageList : public QDesignerCustomWidgetInterface, public QListWidget
+class MessageList : public QListWidget, public QDesignerCustomWidgetInterface
 {
+    Q_OBJECT
+    Q_INTERFACES(QDesignerCustomWidgetCollectionInterface)
+
 public:
-    MessageList();
+    MessageList(QObject *parent = 0);
 };
 
 #endif // MESSAGELIST_H

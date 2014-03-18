@@ -31,3 +31,6 @@ FORMS    += mainwindow.ui
 
 QT += designer
 CONFIG += console plugin
+
+target.path = $$[QT_INSTALL_LUGINS]/designer
+INSTALLS += target

@@ -301,3 +301,24 @@ salt_s get_salt(void)
     return salt;
 }
 
+/*AES Implementation */
+
+aes_digest_s *aes_encrypt(void *message, size_t len)
+{
+    
+    uint8_t state[Nb][4];
+    aes_digest_s *digest;
+    
+    
+    return digest;
+}
+
+void aes_block_encrypt(void *message, aesblock_s *state)
+{
+    
+}
+
+
+
+
+

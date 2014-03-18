@@ -11,7 +11,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
     puts("hello world d");
     fflush(stdout);
     connect(ui->messageBox, SIGNAL(textChanged()), this, SLOT(test()));
