@@ -47,7 +47,7 @@ extern salt_s get_salt(void);
 #define Nk BLOCK_LENGTH/(4*8)
 
 #if BLOCK_LENGTH == 128
-    #define Nr = 10
+    #define Nr 10
 #elif BLOCK_LENGTH == 192
     #define Nr 12
 #elif BLOCK_LENGTH == 256

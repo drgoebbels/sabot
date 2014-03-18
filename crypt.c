@@ -302,7 +302,7 @@ salt_s get_salt(void)
 }
 
 /*AES Implementation */
-uint8_t sbox[16][16] = {
+static uint8_t sbox[16][16] = {
     { 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76 },
     { 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0 },
     { 0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15 },
@@ -321,10 +321,20 @@ uint8_t sbox[16][16] = {
     { 0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 }
 };
 
+static union {
+    uint8_t b[Nb][4];
+    uint16_t s[Nb][2];
+    uint32_t w[Nb];
+}
+state;
+
+
+static uint8_t SubBytes(uint8_t b);
+static inline void ShiftRows(void);
+
 aes_digest_s *aes_encrypt(void *message, size_t len)
 {
     
-    uint8_t state[Nb][4];
     aes_digest_s *digest;
     
     
@@ -334,4 +344,29 @@ aes_digest_s *aes_encrypt(void *message, size_t len)
 void aes_block_encrypt(void *message, aesblock_s *state)
 {
     
+}
+
+uint8_t SubBytes(uint8_t b)
+{
+    return sbox[b >> 4][b & 0x0f];
+}
+
+inline void ShiftRows(void)
+{
+    union {
+        uint8_t _8;
+        uint16_t _16;
+    }backup;
+
+    backup._8 = state.b[Nk-3][0];
+    state.w[Nk-3] = state.w[Nk-3] << 8;
+    state.b[Nk-3][3] = backup._16;
+    
+    backup._16 = state.s[Nk-2][0];
+    state.w[Nk-2] = state.w[Nk-2] << 16;
+    state.s[Nk-2][1] = backup._16;
+    
+    backup._8 = state.b[Nk-1][3];
+    state.w[Nk-1] = state.w[Nk-1] >> 8;
+    state.b[Nk-1][0] = backup._8;
 }
