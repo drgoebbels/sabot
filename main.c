@@ -15,6 +15,9 @@ int main(int arc, char *argv[])
     uint32_t i;
     clock_t time;
     
+    aes_encrypt(NULL, 0);
+    return 0;
+    
     puts("Welcome to SA Bot");
     sha512_s digest;
     //login(S_2D_CENTRAL, "greedy.jew", "omg");

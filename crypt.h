@@ -45,12 +45,16 @@ extern salt_s get_salt(void);
 #define BLOCK_LENGTH 128
 #define Nb BLOCK_LENGTH/32
 #define Nk BLOCK_LENGTH/(4*8)
+    
+#define AES_BLOCK_128 128
+#define AES_BLOCK_192 192
+#define AES_BLOCK_256 256
 
-#if BLOCK_LENGTH == 128
+#if BLOCK_LENGTH == AES_BLOCK_128
     #define Nr 10
-#elif BLOCK_LENGTH == 192
+#elif BLOCK_LENGTH == AES_BLOCK_192
     #define Nr 12
-#elif BLOCK_LENGTH == 256
+#elif BLOCK_LENGTH == AES_BLOCK_256
     #define Nr 14
 #else
     #error "Invalid Block Length"
@@ -74,7 +78,7 @@ union aesblock_s
 
 extern aes_digest_s *aes_encrypt(void *message, size_t len);
 
-extern void aes_block_encrypt(void *message, aesblock_s *state);
+extern void aes_block_encrypt(void *message, aesblock_s *block);
     
 #ifdef __cplusplus
 }

@@ -302,6 +302,15 @@ salt_s get_salt(void)
 }
 
 /*AES Implementation */
+
+typedef union word_u word_u;
+
+union word_u
+{
+    uint32_t word;
+    uint8_t b[4];
+};
+
 static uint8_t sbox[16][16] = {
     { 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76 },
     { 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0 },
@@ -325,30 +334,55 @@ static union {
     uint8_t b[Nb][4];
     uint16_t s[Nb][2];
     uint32_t w[Nb];
+    word_u word[Nb];
 }
 state;
 
-
-static uint8_t SubBytes(uint8_t b);
+static inline uint8_t SubBytes(uint8_t b);
+static inline word_u SubWord(word_u word);
+static inline word_u RotWord(word_u word);
 static inline void ShiftRows(void);
+static inline void MixColumns(void);
+static inline void AddRoundKey(void);
+
+static inline void KeyExpansion(uint8_t *key, word_u *w);
 
 aes_digest_s *aes_encrypt(void *message, size_t len)
 {
     
     aes_digest_s *digest;
-    
-    
+
+   
     return digest;
 }
 
-void aes_block_encrypt(void *message, aesblock_s *state)
+void aes_block_encrypt(void *message, aesblock_s *block)
 {
-    
+    state.b[0][0] = 1;
 }
 
-uint8_t SubBytes(uint8_t b)
+inline uint8_t SubBytes(uint8_t b)
 {
     return sbox[b >> 4][b & 0x0f];
+}
+
+inline word_u SubWord(word_u word)
+{
+    return (word_u) {
+        .b[0] = SubBytes(word.b[0]),
+        .b[1] = SubBytes(word.b[1]),
+        .b[2] = SubBytes(word.b[2]),
+        .b[3] = SubBytes(word.b[3])
+    };
+}
+
+inline word_u RotWord(word_u word)
+{
+    uint8_t backup = word.b[0];
+    
+    word.word = word.word >> 8;
+    word.b[3] = backup;
+    return word;
 }
 
 inline void ShiftRows(void)
@@ -358,15 +392,49 @@ inline void ShiftRows(void)
         uint16_t _16;
     }backup;
 
+    
     backup._8 = state.b[Nk-3][0];
-    state.w[Nk-3] = state.w[Nk-3] << 8;
+    state.w[Nk-3] = state.w[Nk-3] >> 8;
     state.b[Nk-3][3] = backup._16;
     
     backup._16 = state.s[Nk-2][0];
-    state.w[Nk-2] = state.w[Nk-2] << 16;
+    state.w[Nk-2] = state.w[Nk-2] >> 16;
     state.s[Nk-2][1] = backup._16;
     
     backup._8 = state.b[Nk-1][3];
-    state.w[Nk-1] = state.w[Nk-1] >> 8;
+    state.w[Nk-1] = state.w[Nk-1] << 8;
     state.b[Nk-1][0] = backup._8;
+}
+
+inline void MixColumns(void)
+{
+    
+}
+
+inline void AddRoundKey(void)
+{
+    
+}
+
+inline void KeyExpansion(uint8_t *key, word_u *w)
+{
+    unsigned i = 0;
+    word_u temp;
+    
+    for(i = 0; i < Nk; i++) {
+        w[i].b[0] = key[4*i+0];
+        w[i].b[1] = key[4*i+1];
+        w[i].b[2] = key[4*i+2];
+        w[i].b[3] = key[4*i+3];
+    }
+    
+    i = Nk;
+    
+    while(i < Nb*(Nr+1)) {
+        temp = w[i-1];
+        
+        if(!(i % Nk))
+            ;// temp =SubWord(<#word_u word#>)
+            
+    }
 }
