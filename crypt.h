@@ -46,7 +46,7 @@ extern salt_s get_salt(void);
 #define Nb BLOCK_LENGTH/32
 #define Nk BLOCK_LENGTH/(4*8)
     
-//#define STATIC_RCON
+#define STATIC_RCON
 
 #define AES_BLOCK_128 128
 #define AES_BLOCK_192 192
