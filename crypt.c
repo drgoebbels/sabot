@@ -485,7 +485,7 @@ static inline word_u SubWord(word_u word);
 static inline word_u RotWord(word_u word);
 static inline void ShiftRows(void);
 static inline void MixColumns(void);
-static inline void AddRoundKey(void);
+static inline void AddRoundKey(uint8_t *w);
 
 static inline void KeyExpansion(uint8_t *key, word_u *w);
 
@@ -611,9 +611,26 @@ inline void MixColumns(void)
     
 }
 
-inline void AddRoundKey(void)
+inline void AddRoundKey(uint8_t *w)
 {
-    
+#define ADDCOL_C 0
+#define ADDROUND_COL()  state.b[0][ADDCOL_C] ^= w[ADDCOL_C]; \
+                        state.b[1][ADDCOL_C] ^= w[ADDCOL_C+1]; \
+                        state.b[2][ADDCOL_C] ^= w[ADDCOL_C+2]; \
+                        state.b[3][ADDCOL_C] ^= w[ADDCOL_C+3]
+    ADDROUND_COL();
+#undef ADDCOL_C
+#define ADDCOL_C 1
+    ADDROUND_COL();
+#undef ADDCOL_C
+#define ADDCOL_C 2
+    ADDROUND_COL();
+#undef ADDCOL_C
+#define ADDCOL_C 3
+    ADDROUND_COL();
+#undef ADDCOL_C
+#undef ADDROUND_COL
+
 }
 
 inline void KeyExpansion(uint8_t *key, word_u *w)
