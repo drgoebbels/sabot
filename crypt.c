@@ -471,11 +471,10 @@ static word_u rcon[256];
 
 static union {
     uint8_t b[4][Nb];
-#if Nb == 4
     uint16_t s[4][2];
     uint32_t w[4];
-    word_u word[Nb];
-#endif
+    word_u word[4];
+    uint64_t bw[2];
 }
 state;
 
@@ -498,14 +497,8 @@ aes_digest_s *aes_encrypt(void *message, size_t len)
     unsigned i;
     
     if(!rcon[0].b[0]) /* At least cache it */
-        for (i = 1, rcon[0].b[0] = 1; i < 256; i++) {
-        rcon[i].b[0] = xtime(rcon[i-1].b[0]);
-            printf("{{.b = {0x%02x, 0x00, 0x00, 0x00}}, ", rcon[i-1].b[0]);
-            if(!(i%2))
-                putchar('\n');
-        }
-    printf("{{.b = {0x%02x, 0x00, 0x00, 0x00}}, ", rcon[i-1].b[0]);
-
+        for (i = 1, rcon[0].b[0] = 1; i < 256; i++)
+            rcon[i].b[0] = xtime(rcon[i-1].b[0]);
 #endif
     
     return digest;
@@ -568,33 +561,54 @@ inline void ShiftRows(void)
         uint16_t _16;
     }backup;
 
-#if Nb == 4
     backup._8 = state.b[Nk-3][0];
-    state.w[Nk-3] >>= 8;
-    state.b[Nk-3][3] = backup._16;
+    state.w[0] >>= 8;
+    state.b[0][3] = backup._16;
     
     backup._16 = state.s[Nk-2][0];
-    state.w[Nk-2] >>= 16;
-    state.s[Nk-2][1] = backup._16;
+    state.w[1] >>= 16;
+    state.s[1][1] = backup._16;
     
     backup._8 = state.b[Nk-1][3];
-    state.w[Nk-1] >>= 8;
-    state.b[Nk-1][0] = backup._8;
-#elif Nb == 6
-    
-#elif Nb == 8
-
-#endif
-    
+    state.w[2] >>= 8;
+    state.b[2][0] = backup._8;
 }
 
 inline void MixColumns(void)
 {
     unsigned c;
+    union {
+        uint8_t b[4][Nb];
+        uint16_t s[4][2];
+        uint32_t w[4];
+        word_u word[4];
+        uint64_t bw[2];
+    }
+    backup;
+
+    backup.bw[0] = state.bw[0];
+    backup.bw[1] = state.bw[1];
     
     for(c = 0; c < Nb; c++) {
-        
+        state.b[0][c] = multx(0x02, backup.b[0][c]) ^
+                        multx(0x03, backup.b[1][c]) ^
+                        backup.b[2][c] ^ backup.b[3][c]
+                        ;
+        state.b[1][c] = backup.b[0][c] ^
+                        multx(0x02, backup.b[1][c]) ^
+                        multx(0x03, backup.b[2][c]) ^
+                        backup.b[3][3]
+                        ;
+        state.b[2][c] = backup.b[0][c] ^ backup.b[1][c] ^
+                        multx(0x02, backup.b[2][c]) ^
+                        multx(0x03, backup.b[3][c])
+                        ;
+        state.b[3][c] = multx(0x03, backup.b[0][c]) ^
+                        backup.b[1][c] ^ backup.b[2][c] ^
+                        multx(0x02, backup.b[3][c])
+                        ;
     }
+    
 }
 
 inline void AddRoundKey(void)

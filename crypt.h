@@ -42,24 +42,26 @@ extern salt_s get_salt(void);
     
     
 /*************** AES Implementation ***************/
+#define AES_128 128
+#define AES_192 192
+#define AES_256 256
+
 #define BLOCK_LENGTH 128
+
+#define KEY_LENGTH AES_128
 #define Nb BLOCK_LENGTH/32
-#define Nk BLOCK_LENGTH/(4*8)
+#define Nk KEY_LENGTH/(4*8)
     
 #define STATIC_RCON
 
-#define AES_BLOCK_128 128
-#define AES_BLOCK_192 192
-#define AES_BLOCK_256 256
-
-#if BLOCK_LENGTH == AES_BLOCK_128
+#if KEY_LENGTH == AES_128
     #define Nr 10
-#elif BLOCK_LENGTH == AES_BLOCK_192
+#elif KEY_LENGTH == AES_192
     #define Nr 12
-#elif BLOCK_LENGTH == AES_BLOCK_256
+#elif KEY_LENGTH == AES_256
     #define Nr 14
 #else
-    #error "Invalid Block Length"
+    #error "Invalid Key Length"
 #endif
     
 typedef struct aes_digest_s aes_digest_s;
@@ -74,8 +76,8 @@ struct aes_digest_s
     
 union aesblock_s
 {
-    uint8_t state[Nb][4];
-    uint32_t word[Nb];
+    uint8_t state[4][Nb];
+    uint32_t word[4];
 };
 
 extern aes_digest_s *aes_encrypt(void *message, size_t len);
