@@ -78,11 +78,11 @@ union aesblock_s
 {
     uint8_t state[4][Nb];
     uint32_t word[4];
+    uint64_t bw[2];
 };
 
-extern aes_digest_s *aes_encrypt(void *message, size_t len);
+extern aes_digest_s *aes_encrypt(void *message, size_t len, char *key);
 
-extern void aes_block_encrypt(void *message, aesblock_s *block);
     
 #ifdef __cplusplus
 }

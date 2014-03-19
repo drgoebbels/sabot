@@ -30,7 +30,8 @@ static inline uint64_t E_512_0(uint64_t x);
 static inline uint64_t E_512_1(uint64_t x);
 static inline uint64_t s_512_0(uint64_t x);
 static inline uint64_t s_512_1(uint64_t x);
-static inline uint64_t to_big_endian(uint64_t w);
+static inline uint64_t to_big_endian64(uint64_t w);
+static inline uint32_t to_big_endian32(uint32_t w);
 static void print_word(uint64_t w);
 
 void sha512(void *message, size_t len, sha512_s *digest)
@@ -114,7 +115,7 @@ void sha512(void *message, size_t len, sha512_s *digest)
     stptr = states;
     for(i = 0; i < nblocks; i++, stptr++) {
         for(t = 0; t < 16; t++) {
-            W[t] = to_big_endian(stptr->word[t]);
+            W[t] = to_big_endian64(stptr->word[t]);
         }
         while(t < 80) {
             W[t] = s_512_1(W[t-2]) + W[t-7] + s_512_0(W[t-15]) + W[t-16];
@@ -215,7 +216,7 @@ inline uint64_t s_512_1(uint64_t x)
     return ROTRn(x, 19) ^ ROTRn(x, 61) ^ (x >> 6);
 }
 
-inline uint64_t to_big_endian(uint64_t w)
+inline uint64_t to_big_endian64(uint64_t w)
 {
     uint64_t res;
     uint8_t *pres = (uint8_t *)&res;
@@ -228,6 +229,18 @@ inline uint64_t to_big_endian(uint64_t w)
     pres[5] = w >> 16;
     pres[6] = w >> 8;
     pres[7] = w;
+    return res;
+}
+
+inline uint32_t to_big_endian32(uint32_t w)
+{
+    uint32_t res;
+    uint8_t *pres = (uint8_t *)&res;
+
+    pres[0] = w >> 24;
+    pres[1] = w >> 16;
+    pres[2] = w >> 8;
+    pres[3] = w;
     return res;
 }
 
@@ -303,12 +316,21 @@ salt_s get_salt(void)
 
 /*AES Implementation */
 
+typedef union state_s state_s;
 typedef union word_u word_u;
 
 union word_u
 {
     uint32_t word;
     uint8_t b[4];
+};
+
+union state_s {
+    uint8_t b[4][Nb];
+    uint16_t s[4][2];
+    uint32_t w[4];
+    word_u word[4];
+    uint64_t bw[2];
 };
 
 static uint8_t sbox[16][16] = {
@@ -332,7 +354,7 @@ static uint8_t sbox[16][16] = {
 
 #ifdef STATIC_RCON
 
-static word_u rcon[256] = {
+static word_u Rcon[256] = {
     {.b = {0x01, 0x00, 0x00, 0x00}}, {.b = {0x02, 0x00, 0x00, 0x00}},
     {.b = {0x04, 0x00, 0x00, 0x00}}, {.b = {0x08, 0x00, 0x00, 0x00}},
     {.b = {0x10, 0x00, 0x00, 0x00}}, {.b = {0x20, 0x00, 0x00, 0x00}},
@@ -465,48 +487,72 @@ static word_u rcon[256] = {
 
 #else
 
-static word_u rcon[256];
+static word_u Rcon[256];
 
 #endif
 
-static union {
-    uint8_t b[4][Nb];
-    uint16_t s[4][2];
-    uint32_t w[4];
-    word_u word[4];
-    uint64_t bw[2];
-}
-state;
+
 
 static inline uint8_t xtime(uint8_t b);
 static inline uint8_t multx(uint8_t b, uint8_t x);
-static inline uint8_t SubBytes(uint8_t b);
+static inline uint8_t SubByte(uint8_t b);
+static inline void SubBytes(state_s *state);
 static inline word_u SubWord(word_u word);
 static inline word_u RotWord(word_u word);
-static inline void ShiftRows(void);
-static inline void MixColumns(void);
-static inline void AddRoundKey(uint8_t *w);
+static inline void SubBytes(state_s *state);
+static inline void ShiftRows(state_s *state);
+static inline void MixColumns(state_s *state);
+static inline void AddRoundKey(state_s *state, word_u *w);
 
 static inline void KeyExpansion(uint8_t *key, word_u *w);
 
-aes_digest_s *aes_encrypt(void *message, size_t len)
-{
-    aes_digest_s *digest;
+static void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w);
 
+
+aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
+{
+    aesblock_s *digest;
+    word_u keysched[Nb*(Nr+1)];
+    
 #ifndef STATIC_RCON
     unsigned i;
     
     if(!rcon[0].b[0]) /* At least cache it */
         for (i = 1, rcon[0].b[0] = 1; i < 256; i++)
-            rcon[i].b[0] = xtime(rcon[i-1].b[0]);
+            Rcon[i].b[0] = xtime(Rcon[i-1].b[0]);
 #endif
+    KeyExpansion((uint8_t *)key, keysched);
     
-    return digest;
+    putchar('\n');
+    digest = alloc(sizeof(*digest));
+    
+    aes_block_encrypt(message, digest, keysched);
+    return (aes_digest_s *)digest;
 }
 
-void aes_block_encrypt(void *message, aesblock_s *block)
+void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
 {
-    state.b[0][0] = 1;
+    unsigned round;
+    state_s *state;
+    
+    state = (state_s *)out;
+    
+    state->bw[0] = in->bw[0];
+    state->bw[1] = in->bw[1];
+    
+    AddRoundKey(state, w);
+    
+    for(round = 1; round < Nr; round++) {
+        SubBytes(state);
+        ShiftRows(state);
+        MixColumns(state);
+        AddRoundKey(state, &w[round*Nb]);
+    }
+    
+    SubBytes(state);
+    ShiftRows(state);
+    AddRoundKey(state, &w[Nr*Nb]);
+    
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -530,7 +576,7 @@ inline uint8_t multx(uint8_t b, uint8_t x)
 }
 
 
-inline uint8_t SubBytes(uint8_t b)
+inline uint8_t SubByte(uint8_t b)
 {
     return sbox[b >> 4][b & 0x0f];
 }
@@ -538,10 +584,10 @@ inline uint8_t SubBytes(uint8_t b)
 inline word_u SubWord(word_u word)
 {
     return (word_u) {
-        .b[0] = SubBytes(word.b[0]),
-        .b[1] = SubBytes(word.b[1]),
-        .b[2] = SubBytes(word.b[2]),
-        .b[3] = SubBytes(word.b[3])
+        .b[0] = SubByte(word.b[0]),
+        .b[1] = SubByte(word.b[1]),
+        .b[2] = SubByte(word.b[2]),
+        .b[3] = SubByte(word.b[3])
     };
 }
 
@@ -554,27 +600,43 @@ inline word_u RotWord(word_u word)
     return word;
 }
 
-inline void ShiftRows(void)
+inline void SubBytes(state_s *state)
+{
+#define SUB_ROW(C)  state->b[C][0] = SubByte(state->b[C][0]); \
+                    state->b[C][1] = SubByte(state->b[C][1]); \
+                    state->b[C][2] = SubByte(state->b[C][2]); \
+                    state->b[C][3] = SubByte(state->b[C][3])
+    
+    SUB_ROW(0);
+    SUB_ROW(1);
+    SUB_ROW(2);
+    SUB_ROW(3);
+    
+#undef SUB_ROW
+}
+
+
+inline void ShiftRows(state_s *state)
 {
     union {
         uint8_t _8;
         uint16_t _16;
     }backup;
 
-    backup._8 = state.b[Nk-3][0];
-    state.w[0] >>= 8;
-    state.b[0][3] = backup._16;
+    backup._8 = state->b[Nk-3][0];
+    state->w[0] >>= 8;
+    state->b[0][3] = backup._16;
     
-    backup._16 = state.s[Nk-2][0];
-    state.w[1] >>= 16;
-    state.s[1][1] = backup._16;
+    backup._16 = state->s[Nk-2][0];
+    state->w[1] >>= 16;
+    state->s[1][1] = backup._16;
     
-    backup._8 = state.b[Nk-1][3];
-    state.w[2] >>= 8;
-    state.b[2][0] = backup._8;
+    backup._8 = state->b[Nk-1][3];
+    state->w[2] >>= 8;
+    state->b[2][0] = backup._8;
 }
 
-inline void MixColumns(void)
+inline void MixColumns(state_s *state)
 {
     unsigned c;
     union {
@@ -586,24 +648,24 @@ inline void MixColumns(void)
     }
     backup;
 
-    backup.bw[0] = state.bw[0];
-    backup.bw[1] = state.bw[1];
+    backup.bw[0] = state->bw[0];
+    backup.bw[1] = state->bw[1];
     
     for(c = 0; c < Nb; c++) {
-        state.b[0][c] = multx(0x02, backup.b[0][c]) ^
+        state->b[0][c] = multx(0x02, backup.b[0][c]) ^
                         multx(0x03, backup.b[1][c]) ^
                         backup.b[2][c] ^ backup.b[3][c]
                         ;
-        state.b[1][c] = backup.b[0][c] ^
+        state->b[1][c] = backup.b[0][c] ^
                         multx(0x02, backup.b[1][c]) ^
                         multx(0x03, backup.b[2][c]) ^
                         backup.b[3][3]
                         ;
-        state.b[2][c] = backup.b[0][c] ^ backup.b[1][c] ^
+        state->b[2][c] = backup.b[0][c] ^ backup.b[1][c] ^
                         multx(0x02, backup.b[2][c]) ^
                         multx(0x03, backup.b[3][c])
                         ;
-        state.b[3][c] = multx(0x03, backup.b[0][c]) ^
+        state->b[3][c] = multx(0x03, backup.b[0][c]) ^
                         backup.b[1][c] ^ backup.b[2][c] ^
                         multx(0x02, backup.b[3][c])
                         ;
@@ -611,26 +673,19 @@ inline void MixColumns(void)
     
 }
 
-inline void AddRoundKey(uint8_t *w)
+inline void AddRoundKey(state_s *state, word_u *w)
 {
-#define ADDCOL_C 0
-#define ADDROUND_COL()  state.b[0][ADDCOL_C] ^= w[ADDCOL_C]; \
-                        state.b[1][ADDCOL_C] ^= w[ADDCOL_C+1]; \
-                        state.b[2][ADDCOL_C] ^= w[ADDCOL_C+2]; \
-                        state.b[3][ADDCOL_C] ^= w[ADDCOL_C+3]
-    ADDROUND_COL();
-#undef ADDCOL_C
-#define ADDCOL_C 1
-    ADDROUND_COL();
-#undef ADDCOL_C
-#define ADDCOL_C 2
-    ADDROUND_COL();
-#undef ADDCOL_C
-#define ADDCOL_C 3
-    ADDROUND_COL();
-#undef ADDCOL_C
+#define ADDROUND_COL(C) state->b[0][C] ^= w[C].b[0]; \
+                        state->b[1][C] ^= w[C].b[1]; \
+                        state->b[2][C] ^= w[C].b[2]; \
+                        state->b[3][C] ^= w[C].b[3]
+    
+    ADDROUND_COL(0);
+    ADDROUND_COL(1);
+    ADDROUND_COL(2);
+    ADDROUND_COL(3);
+    
 #undef ADDROUND_COL
-
 }
 
 inline void KeyExpansion(uint8_t *key, word_u *w)
@@ -645,13 +700,15 @@ inline void KeyExpansion(uint8_t *key, word_u *w)
         w[i].b[3] = key[4*i+3];
     }
     
-    i = Nk;
-    
-    while(i < Nb*(Nr+1)) {
+    for(i = Nk; i < Nb*(Nr+1); i++) {
         temp = w[i-1];
         
         if(!(i % Nk))
-            ;// temp =SubWord(<#word_u word#>)
-            
+            temp.word = SubWord(RotWord(temp)).word ^ Rcon[i/Nk].word;
+#if Nk > 6
+        else if((i ^ Nk) == 4)
+            temp = SubWord(temp);
+#endif
+        w[i].word = w[i-Nk].word ^ temp.word;
     }
 }

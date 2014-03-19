@@ -9,13 +9,25 @@
 
 #define N_TESTS 1000
 
+char *key = "\x2b\x7e\x15\x16\x28\xae\xd2\xa6\xab\xf7\x15\x88\x09\xcf\x4f\x3c";
+char *clear = "\x32\x43\xf6\xa8\x88\x5a\x30\x8d\x31\x31\x98\xa2\xe0\x37\x07\x34";
+
 int main(int arc, char *argv[])
 {
     uint64_t accum = 0;
-    uint32_t i;
+    uint32_t i, j;
     clock_t time;
+    aesblock_s *b;
     
-    aes_encrypt(NULL, 0);
+    b = (aesblock_s *)aes_encrypt(clear, sizeof(clear)-1, key);
+    
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 4; j++) {
+            printf("0x%02x, ", b->state[i][j]);
+        }
+        putchar('\n');
+    }
+    
     return 0;
     
     puts("Welcome to SA Bot");
