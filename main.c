@@ -20,7 +20,7 @@ int main(int arc, char *argv[])
     aesblock_s *b;
     
     b = (aesblock_s *)aes_encrypt(clear, sizeof(clear)-1, key);
-    
+    return 0;
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 4; j++) {
             printf("0x%02x, ", b->state[i][j]);

@@ -49,10 +49,10 @@ extern salt_s get_salt(void);
 #define BLOCK_LENGTH 128
 
 #define KEY_LENGTH AES_128
-#define Nb BLOCK_LENGTH/32
-#define Nk KEY_LENGTH/(4*8)
+#define Nb (BLOCK_LENGTH/32)
+#define Nk (KEY_LENGTH/(4*8))
     
-#define STATIC_RCON
+//#define STATIC_RCON
 
 #if KEY_LENGTH == AES_128
     #define Nr 10
@@ -82,6 +82,8 @@ union aesblock_s
 };
 
 extern aes_digest_s *aes_encrypt(void *message, size_t len, char *key);
+
+extern void print_block(aesblock_s *b);
 
     
 #ifdef __cplusplus
