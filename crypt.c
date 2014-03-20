@@ -523,10 +523,6 @@ aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
     
     
     KeyExpansion((uint8_t *)key, keysched);
-    int i;
-    for(i = 0; i < Nb*(Nr+1); i++)
-        printf("%08x\n", keysched[i].word);
-    return NULL;
     digest = alloc(sizeof(*digest));
     
     aes_block_encrypt(message, digest, keysched);
@@ -546,23 +542,20 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
             state->b[j][i] = in->state[i][j];
     }
     
-    //print_block((aesblock_s *)state);
 
     AddRoundKey(state, w);
-    
+
     for(round = 1; round < Nr; round++) {
         SubBytes(state);
         ShiftRows(state);
         MixColumns(state);
-        //print_block((aesblock_s *)state);
-
         AddRoundKey(state, &w[round*Nb]);
     }
-    
     SubBytes(state);
     ShiftRows(state);
     AddRoundKey(state, &w[Nr*Nb]);
-    
+    print_block((aesblock_s *)state);
+
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -581,10 +574,9 @@ inline uint8_t multx(uint8_t b, uint8_t x)
         xt = xtime(xt);
         shift <<= 1;
     }
-    while(shift != 0 && shift < x);
+    while(shift != 0 && ((uint16_t)shift & 0x00ff) <= ((uint16_t)x & 0x00ff));
     return prod;
 }
-
 
 inline uint8_t SubByte(uint8_t b)
 {
@@ -633,17 +625,17 @@ inline void ShiftRows(state_s *state)
         uint16_t _16;
     }backup;
 
-    backup._8 = state->b[0][0];
-    state->w[0] >>= 8;
-    state->b[0][3] = backup._16;
+    backup._8 = state->b[1][0];
+    state->w[1] >>= 8;
+    state->b[1][3] = backup._16;
     
-    backup._16 = state->s[1][0];
-    state->w[1] >>= 16;
-    state->s[1][1] = backup._16;
+    backup._16 = state->s[2][0];
+    state->w[2] >>= 16;
+    state->s[2][1] = backup._16;
     
-    backup._8 = state->b[2][3];
-    state->w[2] >>= 8;
-    state->b[2][0] = backup._8;
+    backup._8 = state->b[3][3];
+    state->w[3] <<= 8;
+    state->b[3][0] = backup._8;
 }
 
 inline void MixColumns(state_s *state)
@@ -669,7 +661,7 @@ inline void MixColumns(state_s *state)
         state->b[1][c] = backup.b[0][c] ^
                         multx(0x02, backup.b[1][c]) ^
                         multx(0x03, backup.b[2][c]) ^
-                        backup.b[3][3]
+                        backup.b[3][c]
                         ;
         state->b[2][c] = backup.b[0][c] ^ backup.b[1][c] ^
                         multx(0x02, backup.b[2][c]) ^
@@ -712,17 +704,13 @@ inline void KeyExpansion(uint8_t *key, word_u *w)
     
     for(i = Nk; i < Nb*(Nr+1); i++) {
         temp = w[i-1];
-        printf("temp: %08x\n", temp.word);
         if(!(i % Nk))
-            temp.word = SubWord(RotWord(temp)).word ^ Rcon[i/Nk].word;
+            temp.word = SubWord(RotWord(temp)).word ^ Rcon[(i-1)/Nk].word;
 #if Nk > 6
         else if((i ^ Nk) == 4)
             temp = SubWord(temp);
 #endif
-        printf("w[i-nk]: %08x  temp: %08x\n", w[i-Nk].word, temp.word);
         w[i].word = w[i-Nk].word ^ temp.word;
-        printf("w[i]: %08x, i%%Nk: %d\n\n", w[i].word, i % Nk);
-
     }
 }
 
