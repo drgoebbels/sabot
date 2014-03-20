@@ -82,6 +82,7 @@ union aesblock_s
 };
 
 extern aes_digest_s *aes_encrypt(void *message, size_t len, char *key);
+extern aes_digest_s *aes_decrypt(void *message, size_t len, char *key);
 
 extern void print_block(aesblock_s *b);
 

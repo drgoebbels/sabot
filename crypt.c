@@ -524,9 +524,12 @@ static inline void AddRoundKey(state_s *state, word_u *w);
 static inline void KeyExpansion(uint8_t *key, word_u *w);
 static void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w);
 
-static void InvShiftRows(state_s *state);
 
-
+static void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w);
+static inline uint8_t InvSubByte(uint8_t b);
+static inline void InvShiftRows(state_s *state);
+static inline void InvSubBytes(state_s *state);
+static inline void InvMixColumns(state_s *state);
 
 aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
 {
@@ -561,10 +564,7 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
         for(j = 0; j < 4; j++)
             state->b[j][i] = in->state[i][j];
     }
-    
-
     AddRoundKey(state, w);
-
     for(round = 1; round < Nr; round++) {
         SubBytes(state);
         ShiftRows(state);
@@ -574,8 +574,6 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     SubBytes(state);
     ShiftRows(state);
     AddRoundKey(state, &w[Nr*Nb]);
-    print_block((aesblock_s *)state);
-
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -636,7 +634,6 @@ inline void SubBytes(state_s *state)
     
 #undef SUB_ROW
 }
-
 
 inline void ShiftRows(state_s *state)
 {
@@ -748,7 +745,48 @@ void print_block(aesblock_s *b)
 
 }
 
-void InvShiftRows(state_s *state)
+aes_digest_s *aes_decrypt(void *message, size_t len, char *key)
+{
+    aesblock_s *digest;
+    word_u keysched[Nb*(Nr+1)];
+    
+    KeyExpansion((uint8_t *)key, keysched);
+    digest = alloc(sizeof(*digest));
+    
+    aes_block_decrypt(message, digest, keysched);
+    return (aes_digest_s *)digest;
+
+}
+
+void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
+{
+    unsigned i, j;
+    unsigned round;
+    state_s *state;
+    
+    state = (state_s *)out;
+    
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 4; j++)
+            state->b[j][i] = in->state[i][j];
+    }
+    for(round = Nr-1; round >= 1; round--) {
+        InvShiftRows(state);
+        InvSubBytes(state);
+        AddRoundKey(state, &w[round*Nb]);
+        InvMixColumns(state);
+    }
+    InvShiftRows(state);
+    InvSubBytes(state);
+    AddRoundKey(state, w);
+}
+
+inline uint8_t InvSubByte(uint8_t b)
+{
+    return inv_sbox[b >> 4][b & 0x0f];
+}
+
+inline void InvShiftRows(state_s *state)
 {
     union {
         uint8_t _8;
@@ -767,4 +805,60 @@ void InvShiftRows(state_s *state)
     state->w[3] >>= 8;
     state->b[3][3] = backup._8;
 
+}
+
+inline void InvSubBytes(state_s *state)
+{
+#define SUB_ROW(C)  state->b[C][0] = InvSubByte(state->b[C][0]); \
+                    state->b[C][1] = InvSubByte(state->b[C][1]); \
+                    state->b[C][2] = InvSubByte(state->b[C][2]); \
+                    state->b[C][3] = InvSubByte(state->b[C][3])
+    
+    SUB_ROW(0);
+    SUB_ROW(1);
+    SUB_ROW(2);
+    SUB_ROW(3);
+    
+#undef SUB_ROW
+
+}
+
+
+inline void InvMixColumns(state_s *state)
+{
+    unsigned c;
+    union {
+        uint8_t b[4][Nb];
+        uint16_t s[4][2];
+        uint32_t w[4];
+        word_u word[4];
+        uint64_t bw[2];
+    }
+    backup;
+    
+    backup.bw[0] = state->bw[0];
+    backup.bw[1] = state->bw[1];
+    
+    for(c = 0; c < Nb; c++) {
+        state->b[0][c] =    multx(0x0e, backup.b[0][c]) ^
+                            multx(0x0b, backup.b[1][c]) ^
+                            multx(0x0d, backup.b[2][c]) ^
+                            multx(0x09, backup.b[3][c])
+                            ;
+        state->b[1][c] =    multx(0x09, backup.b[0][c]) ^
+                            multx(0x0e, backup.b[1][c]) ^
+                            multx(0x0b, backup.b[2][c]) ^
+                            multx(0x0d, backup.b[3][c])
+                            ;
+        state->b[2][c] =    multx(0x0d, backup.b[0][c]) ^
+                            multx(0x09, backup.b[1][c]) ^
+                            multx(0x0e, backup.b[2][c]) ^
+                            multx(0x0b, backup.b[3][c])
+                            ;
+        state->b[3][c] =    multx(0x0b, backup.b[0][c]) ^
+                            multx(0x0d, backup.b[1][c]) ^
+                            multx(0x09, backup.b[2][c]) ^
+                            multx(0x0e, backup.b[3][c])
+                            ;
+    }
 }
