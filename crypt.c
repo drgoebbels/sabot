@@ -544,16 +544,13 @@ aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
             Rcon[i_].b[0] = xtime(Rcon[i_-1].b[0]);
 #endif
     
-    
     KeyExpansion((uint8_t *)key, keysched);
     digest = alloc(sizeof(*digest));
     dec = alloc(sizeof(*digest));
     
     aes_block_encrypt(message, digest, keysched);
-    print_block((aesblock_s *)digest);
 
     aes_block_decrypt(digest, dec, keysched);
-    //print_block(dec);
     return (aes_digest_s *)digest;
 }
 
@@ -771,17 +768,14 @@ void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     state_s *state;
     
     state = (state_s *)out;
-    
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 4; j++)
             state->b[i][j] = in->state[i][j];
     }
+    
+    AddRoundKey(state, &w[Nr*Nb]);
     print_block((aesblock_s *)state);
 
-    AddRoundKey(state, &w[Nr*Nb]);
-    
-    print_block((aesblock_s *)state);
-    
     for(round = Nr-1; round >= 1; round--) {
         InvShiftRows(state);
         InvSubBytes(state);
@@ -791,6 +785,14 @@ void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     InvShiftRows(state);
     InvSubBytes(state);
     AddRoundKey(state, w);
+    print_block((aesblock_s *)state);
+    
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 4; j++)
+            state->b[i][j] = in->state[i][j];
+    }
+
+
 }
 
 inline uint8_t InvSubByte(uint8_t b)
@@ -809,14 +811,13 @@ inline void InvShiftRows(state_s *state)
     state->w[1] <<= 8;
     state->b[1][0] = backup._16;
     
-    backup._16 = state->s[2][0];
+    backup._16 = state->s[2][1];
     state->w[2] <<= 16;
-    state->s[2][1] = backup._16;
+    state->s[2][0] = backup._16;
     
     backup._8 = state->b[3][0];
     state->w[3] >>= 8;
     state->b[3][3] = backup._8;
-
 }
 
 inline void InvSubBytes(state_s *state)
@@ -839,9 +840,6 @@ inline void InvMixColumns(state_s *state)
     unsigned c;
     union {
         uint8_t b[4][Nb];
-        uint16_t s[4][2];
-        uint32_t w[4];
-        word_u word[4];
         uint64_t bw[2];
     }
     backup;
