@@ -18,7 +18,7 @@ int main(int arc, char *argv[])
     uint32_t i, j;
     clock_t time;
     aesblock_s *b;
-    
+
     b = (aesblock_s *)aes_encrypt(clear, sizeof(clear)-1, key);
     return 0;
     for(i = 0; i < 4; i++) {
@@ -29,6 +29,9 @@ int main(int arc, char *argv[])
     }
     
     return 0;
+    
+    
+    
     
     puts("Welcome to SA Bot");
     sha512_s digest;

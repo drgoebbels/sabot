@@ -533,7 +533,7 @@ static inline void InvMixColumns(state_s *state);
 
 aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
 {
-    aesblock_s *digest;
+    aesblock_s *digest, *dec;
     word_u keysched[Nb*(Nr+1)];
     
 #ifndef STATIC_RCON
@@ -547,8 +547,13 @@ aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
     
     KeyExpansion((uint8_t *)key, keysched);
     digest = alloc(sizeof(*digest));
+    dec = alloc(sizeof(*digest));
     
     aes_block_encrypt(message, digest, keysched);
+    print_block((aesblock_s *)digest);
+
+    aes_block_decrypt(digest, dec, keysched);
+    //print_block(dec);
     return (aes_digest_s *)digest;
 }
 
@@ -567,6 +572,7 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     AddRoundKey(state, w);
     for(round = 1; round < Nr; round++) {
         SubBytes(state);
+
         ShiftRows(state);
         MixColumns(state);
         AddRoundKey(state, &w[round*Nb]);
@@ -641,7 +647,7 @@ inline void ShiftRows(state_s *state)
         uint8_t _8;
         uint16_t _16;
     }backup;
-
+    
     backup._8 = state->b[1][0];
     state->w[1] >>= 8;
     state->b[1][3] = backup._16;
@@ -768,8 +774,14 @@ void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 4; j++)
-            state->b[j][i] = in->state[i][j];
+            state->b[i][j] = in->state[i][j];
     }
+    print_block((aesblock_s *)state);
+
+    AddRoundKey(state, &w[Nr*Nb]);
+    
+    print_block((aesblock_s *)state);
+    
     for(round = Nr-1; round >= 1; round--) {
         InvShiftRows(state);
         InvSubBytes(state);
@@ -820,9 +832,7 @@ inline void InvSubBytes(state_s *state)
     SUB_ROW(3);
     
 #undef SUB_ROW
-
 }
-
 
 inline void InvMixColumns(state_s *state)
 {
