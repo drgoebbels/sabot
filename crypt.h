@@ -42,14 +42,24 @@ extern salt_s get_salt(void);
     
     
 /*************** AES Implementation ***************/
+
+#define AES_MODE_ECB 1  /*
+                            If this isn't set, plaintext size must be x128 bytes
+                            or else the behavior is undefined.
+                        */
+    
+#define AES_MODE_CBC 2
+
+#define AES_MODE (AES_MODE_ECB | AES_MODE_CBC)
+    
 #define AES_128 128
 #define AES_192 192
 #define AES_256 256
 
-#define BLOCK_LENGTH 128
+#define AES_BLOCK_LENGTH 128
 
 #define KEY_LENGTH AES_128
-#define Nb (BLOCK_LENGTH/32)
+#define Nb (AES_BLOCK_LENGTH/32)
 #define Nk (KEY_LENGTH/(4*8))
     
 //#define STATIC_RCON
@@ -66,22 +76,39 @@ extern salt_s get_salt(void);
     
 typedef struct aes_digest_s aes_digest_s;
 typedef union aesblock_s aesblock_s;
+typedef struct aesblock_node_s aesblock_node_s;
 
     
 struct aes_digest_s
 {
-    size_t len;
-    uint8_t data[];
+    size_t nblocks;
+    aesblock_node_s *head;
 };
     
+/* 
+ Naming of union members correspond with naming conventions for 
+ addressable intel units. 
+ b = byte (8 bits)
+ w = word (16 bits)
+ l = long word (32 bits)
+ q = quad word (64 bits)
+ */
 union aesblock_s
 {
-    uint8_t state[4][Nb];
-    uint32_t word[4];
-    uint64_t bw[2];
+    uint8_t b[4][Nb];
+    uint16_t w[4][Nb/2];
+    uint32_t l[4];
+    uint64_t q[2];
+};
+    
+struct aesblock_node_s
+{
+    aesblock_s block;
+    aesblock_node_s *next;
+    aesblock_node_s *prev;
 };
 
-extern aes_digest_s *aes_encrypt(void *message, size_t len, char *key);
+extern aes_digest_s aes_encrypt(void *message, size_t len, char *key);
 extern aes_digest_s *aes_decrypt(void *message, size_t len, char *key);
 
 extern void print_block(aesblock_s *b);
