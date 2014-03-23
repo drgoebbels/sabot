@@ -1,8 +1,10 @@
 /*
- Reinventing the wheel for lulz
+ DO NOT COMPILE WITH -fstrict-aliasing
  
  sha512 implementation as specified by nist. Not entirely compliant due to lack
  of support of 128-bit message lengths.
+ 
+ further down is an aes implementation as specified by nist.
  */
 #include <stdio.h>
 #include <string.h>
