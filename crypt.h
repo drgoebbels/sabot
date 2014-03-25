@@ -74,16 +74,11 @@ extern salt_s get_salt(void);
     #error "Invalid Key Length"
 #endif
     
-typedef struct aes_digest_s aes_digest_s;
 typedef union aesblock_s aesblock_s;
-typedef struct aesblock_node_s aesblock_node_s;
-
     
-struct aes_digest_s
-{
-    size_t nblocks;
-    aesblock_node_s *head;
-};
+typedef struct aesblock_node_s aesblock_node_s;
+typedef struct aes_digest_s aes_digest_s;
+
     
 /* 
  Naming of union members correspond with naming conventions for 
@@ -104,8 +99,14 @@ union aesblock_s
 struct aesblock_node_s
 {
     aesblock_s block;
-    aesblock_node_s *next;
     aesblock_node_s *prev;
+    aesblock_node_s *next;
+};
+    
+struct aes_digest_s
+{
+    aesblock_node_s *head;
+    aesblock_node_s *tail;
 };
 
 extern aes_digest_s aes_encrypt(void *message, size_t len, char *key);

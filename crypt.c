@@ -515,6 +515,7 @@ static inline void MixColumns(aesblock_s *state);
 static inline void AddRoundKey(aesblock_s *state, word_u *w);
 static inline void KeyExpansion(uint8_t *key, word_u *w);
 static void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w);
+static aesblock_s *newblock(aes_digest_s *d);
 
 
 static void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w);
@@ -528,7 +529,7 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
     size_t i, j;
     aes_digest_s enc;
     aesblock_s state;
-    aesblock_node_s *digest, *curr;
+    aesblock_s *digest;
     word_u keysched[Nb*(Nr+1)];
     
 #ifndef STATIC_RCON
@@ -538,25 +539,15 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
 #endif
     
     KeyExpansion((uint8_t *)key, keysched);
+    
     enc.head = NULL;
     for(i = 0; i + AES_BLOCK_LENGTH <= len; i += AES_BLOCK_LENGTH) {
-        digest = alloc(sizeof(*digest));
-        if(enc.head) {
-            digest->prev = curr;
-            curr->next = digest;
-            curr = digest;
-        }
-        else {
-            curr = enc.head = digest;
-            digest->prev = NULL;
-        }
-        digest->next = NULL;
+        digest = newblock(&enc);
         for(i = 0; i < 4; i++) {
             for(j = 0; j < 4; j++)
                 state.b[j][i] = ((uint8_t *)message)[4*i + j];
         }
-
-        aes_block_encrypt(&state, &digest->block, keysched);
+        aes_block_encrypt(&state, digest, keysched);
     }
     
 #if (AES_MODE & AES_MODE_ECB) /* Do PKCS5 Padding */
@@ -573,6 +564,17 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
                 state.b[j][i] = ((uint8_t *)message)[tmp];
             else {
                 tmp = AES_BLOCK_LENGTH - tmp;
+                if(!tmp){
+                    aes_block_encrypt(&state, digest, keysched);
+                    digest = newblock(&enc);
+                    for(i = 0;  i < 4; i++) {
+                        for (j = 0; j < 4; j++)
+                            state.b[i][j] = AES_BLOCK_LENGTH;
+                    }
+                    
+                }
+                //MORE CODE NEEDED!
+                
                 while(i < 4) {
                     while(j < 4) {
                         state.b[j][i] = tmp;
@@ -586,7 +588,11 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
         }
     }
 ecb_done:
-    
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < 4; j++) {
+            printf("%u, ", state.b[j][i]);
+        }
+    }
 #endif
 
     return enc;
@@ -884,4 +890,23 @@ inline void InvMixColumns(aesblock_s *state)
                             multx(0x0e, backup.b[3][c])
                             ;
     }
+}
+
+static aesblock_s *newblock(aes_digest_s *d)
+{
+    aesblock_node_s *n;
+    
+    n = alloc(sizeof(*n));
+    n->next = NULL;
+    if(d->head) {
+        d->tail->next = n;
+        n->prev = d->tail;
+        d->tail = n;
+    }
+    else {
+        n->prev = NULL;
+        d->head = n;
+        d->tail = n;
+    }
+    return &n->block;
 }
