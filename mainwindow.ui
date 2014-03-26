@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>846</width>
+    <width>885</width>
     <height>490</height>
    </rect>
   </property>
@@ -43,13 +43,26 @@
      </rect>
     </property>
    </widget>
+   <widget class="QPushButton" name="addLogin">
+    <property name="geometry">
+     <rect>
+      <x>690</x>
+      <y>10</y>
+      <width>141</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>add login</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>846</width>
+     <width>885</width>
      <height>22</height>
     </rect>
    </property>

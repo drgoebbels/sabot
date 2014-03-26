@@ -2,16 +2,24 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <pthread.h>
+#include <QThread>
 
 namespace Ui {
-class MainWindow;
+    class MonitorThread;
+    class MainWindow;
 }
+
+class MonitorThread : public QThread
+{
+    Q_OBJECT
+private:
+    void run();
+};
+
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -19,6 +27,7 @@ public:
 public slots:
     void postMessage();
     void postRemoteMessage();
+    void loginButtonClicked();
 
 signals:
     void returnPressed();
@@ -26,8 +35,9 @@ signals:
 
 
 private:
-    pthread_t sanet_thread;
     Ui::MainWindow *ui;
+    MonitorThread monitor;
 };
+
 
 #endif // MAINWINDOW_H

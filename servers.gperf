@@ -1,0 +1,25 @@
+%{
+#include "servers.h"
+%}
+%omit-struct-type
+struct server_rec_s{char *name; char *ip;}
+%%
+2D Central,        "74.86.43.9"
+Paper Thin City,        "74.86.43.8"
+Fine Line Island,         "67.19.138.234"
+U of SA,           "67.19.138.236"
+Flat World,        "74.86.3.220"
+Planar Outpost,    "67.19.138.235"
+Mobius Metropolis, "74.86.3.221"
+EU Amsterdam,         "94.75.214.10"
+Compatibility,     "74.86.3.222"
+s_quickstart,        "67.19.138.236"
+SS Lineage,        "74.86.43.10"
+%%
+
+#line 153
+
+inline server_rec_s *server_lookup(char *key)
+{
+	return server_lookup_(key, (int)strlen(key));
+}

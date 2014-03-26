@@ -1,7 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-
 #include "sanet.h"
+
+#include "loginprompt.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -10,9 +11,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
-
-    pthread_create(&sanet_listen, NULL, (void *(*)(void *))sanet_listen, NULL);
-
+    connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
+    monitor.start();
 }
 
 
@@ -29,14 +29,23 @@ void MainWindow::postRemoteMessage()
 
 }
 
+void MainWindow::loginButtonClicked()
+{
+    LoginPrompt lp(this);
+    lp.exec();
+}
+
+void MonitorThread::run()
+{
+    while(true) {
+        wait_message();
+
+        release_message();
+    }
+}
+
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
-void sanet_listen(void)
-{
-    while(1) {
-
-    }
-}

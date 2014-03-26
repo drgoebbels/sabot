@@ -67,9 +67,9 @@ extern monitor_s monitor;
 
 extern connect_inst_s *connlist;
 
-extern void sanet_listen(void);
-
 extern connect_inst_s *login(char *server, char *uname, char *pass);
+extern void wait_message(void);
+extern void release_message(void);
 
 #if defined __cplusplus
 }

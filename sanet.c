@@ -158,3 +158,14 @@ void add_connection(connect_inst_s *c)
         connlist = c;
     connlist_tail = c;
 }
+
+void wait_message(void)
+{
+    pthread_mutex_lock(&monitor.lock);
+    pthread_cond_wait(&monitor.cond, &monitor.lock);
+}
+
+void release_message(void)
+{
+    pthread_mutex_unlock(&monitor.lock);
+}

@@ -16,12 +16,17 @@ SOURCES += main.cpp\
         crypt.c \
         database.c \
         sanet.c \
-        general.c
+        general.c \
+        loginprompt.cpp \
+        servers.c
 
 HEADERS  += mainwindow.h \
             sanet.h \
             database.h  \
             crypt.h \
-            general.h
+            general.h \
+            loginprompt.h \
+            servers.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    loginprompt.ui
