@@ -16,11 +16,13 @@ SOURCES += main.cpp\
         mainwindow.cpp \
         crypt.c \
         database.c \
-        sanet.c
+        sanet.c \
+        general.c
 
 HEADERS  += mainwindow.h \
             sanet.h \
             database.h  \
-            crypt.h
+            crypt.h \
+            general.h
 
 FORMS    += mainwindow.ui
