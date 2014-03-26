@@ -137,16 +137,16 @@ void connect_thread(connect_inst_s *c)
     while(1) {
         send(sock, ack_x1, sizeof(ack_x2), 0);
         len = recv(sock, buf, sizeof(buf), 0);
-        
+
         packet = alloc(sizeof(*packet));
         packet->data = alloc(len);
         memcpy(packet->data, buf, len);
-        
+
         if(monitor.inuse) {
             pthread_mutex_lock(&monitor.lock);
             pthread_cond_signal(&monitor.cond);
         }
-        
+
     }
 }
 
