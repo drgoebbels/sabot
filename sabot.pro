@@ -1,6 +1,6 @@
 #-------------------------------------------------
 #
-# Project created by QtCreator 2014-03-17T14:34:35
+# Project created by QtCreator 2014-03-26T00:41:58
 #
 #-------------------------------------------------
 
@@ -9,28 +9,18 @@ QT       += core gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = sabot
-TEMPLATE = app lib
+TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp\
-        crypt.c\
-        database.c\
-        sanet.c\
-        general.c \
-    messagelist.cpp
+        mainwindow.cpp \
+        crypt.c \
+        database.c \
+        sanet.c
 
-HEADERS  += mainwindow.h\
-            crypt.h\
-            database.h\
+HEADERS  += mainwindow.h \
             sanet.h \
-    messagelist.h
+            database.h  \
+            crypt.h
 
 FORMS    += mainwindow.ui
-
-
-QT += designer
-CONFIG += console plugin
-
-target.path = $$[QT_INSTALL_LUGINS]/designer
-INSTALLS += target

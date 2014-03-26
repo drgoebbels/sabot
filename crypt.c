@@ -571,17 +571,16 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
                         for (j = 0; j < 4; j++)
                             state.b[i][j] = AES_BLOCK_LENGTH;
                     }
-                    
                 }
-                //MORE CODE NEEDED!
-                
-                while(i < 4) {
-                    while(j < 4) {
-                        state.b[j][i] = tmp;
-                        j++;
+                else {
+                    while(i < 4) {
+                        while(j < 4) {
+                            state.b[j][i] = tmp;
+                            j++;
+                        }
+                        j = 0;
+                        i++;
                     }
-                    j = 0;
-                    i++;
                 }
                 goto ecb_done;
             }
@@ -697,7 +696,7 @@ inline void MixColumns(aesblock_s *state)
 {
     unsigned c;
     aesblock_s backup;
-    
+
     backup.q[0] = state->q[0];
     backup.q[1] = state->q[1];
     
