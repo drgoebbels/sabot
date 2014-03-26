@@ -19,6 +19,6 @@ extern inline server_rec_s *server_lookup(char *key);
 #ifdef __cplusplus
 }
 #endif
-  
+
 
 #endif

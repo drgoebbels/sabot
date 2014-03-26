@@ -39,8 +39,8 @@ struct chatbox_s
 
 struct connect_inst_s
 {
-    char *server;
-    char *uname;
+    const char *server;
+    const char *uname;
     int sock;
     chatbox_s chat;
     pthread_t thread;
@@ -67,7 +67,7 @@ extern monitor_s monitor;
 
 extern connect_inst_s *connlist;
 
-extern connect_inst_s *login(char *server, char *uname, char *pass);
+extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
 extern void wait_message(void);
 extern void release_message(void);
 

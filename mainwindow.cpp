@@ -33,6 +33,11 @@ void MainWindow::loginButtonClicked()
 {
     LoginPrompt lp(this);
     lp.exec();
+
+    printf("Server: %s\tUsername: %s\tPassword: %s\n", lp.getServer(), lp.getUsername(), lp.getPassword());
+
+    login(lp.getServer(), lp.getUsername(), lp.getPassword());
+    lp.reset();
 }
 
 void MonitorThread::run()

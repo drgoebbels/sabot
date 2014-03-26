@@ -42,11 +42,11 @@ static char finish_login[] = {
     0x30, 0x33, 0x5f, 0x00
 };
 
-static int socket_(char *server);
+static int socket_(const char *server);
 static void connect_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
-int socket_(char *server)
+int socket_(const char *server)
 {
     int sock;
     static struct sockaddr_in sockin;
@@ -84,7 +84,7 @@ int socket_(char *server)
     return sock;
 }
 
-connect_inst_s *login(char *server, char *uname, char *pass)
+connect_inst_s *login(const char *server, const char *uname, const char *pass)
 {
     int sock;
     char buf[2*MAX_UNAME_PASS+5];

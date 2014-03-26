@@ -29,19 +29,6 @@
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
    </property>
   </widget>
-  <widget class="QTextEdit" name="username">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>30</y>
-     <width>281</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="inputMethodHints">
-    <set>Qt::ImhMultiLine</set>
-   </property>
-  </widget>
   <widget class="QLabel" name="usernameLabel">
    <property name="geometry">
     <rect>
@@ -65,7 +52,7 @@
     </rect>
    </property>
    <property name="inputMethodHints">
-    <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+    <set>Qt::ImhNone</set>
    </property>
    <property name="maxLength">
     <number>20</number>
@@ -95,6 +82,24 @@
      <width>171</width>
      <height>26</height>
     </rect>
+   </property>
+   <property name="mouseTracking">
+    <bool>false</bool>
+   </property>
+   <property name="focusPolicy">
+    <enum>Qt::TabFocus</enum>
+   </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::DefaultContextMenu</enum>
+   </property>
+   <property name="editable">
+    <bool>false</bool>
+   </property>
+   <property name="currentText">
+    <string>2D Central</string>
+   </property>
+   <property name="sizeAdjustPolicy">
+    <enum>QComboBox::AdjustToContents</enum>
    </property>
    <item>
     <property name="text">
@@ -173,7 +178,28 @@
     <string>cancel</string>
    </property>
   </widget>
+  <widget class="QLineEdit" name="username">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>30</y>
+     <width>281</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="maxLength">
+    <number>20</number>
+   </property>
+  </widget>
  </widget>
+ <tabstops>
+  <tabstop>username</tabstop>
+  <tabstop>password</tabstop>
+  <tabstop>serverList</tabstop>
+  <tabstop>buttonBox</tabstop>
+  <tabstop>login</tabstop>
+  <tabstop>cancel</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
