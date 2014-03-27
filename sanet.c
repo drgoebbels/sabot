@@ -6,17 +6,23 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "general.h"
 #include "sanet.h"
 
+#define SLEEP_TIME  10
 #define BUF_SIZE 1024
 #define LOGIN_FLAG "09"
 
 #define MAX_UNAME_PASS 20
 
 connect_inst_s *connlist;
-monitor_s monitor;
+monitor_s monitor = {
+    .inuse = 0,
+    .cond = PTHREAD_COND_INITIALIZER,
+    .lock = PTHREAD_MUTEX_INITIALIZER
+};
 
 static connect_inst_s *connlist_tail;
 
@@ -26,6 +32,11 @@ static char init_send[] = {
     0x43, 0x43, 0x36, 0x32, 0x4e, 0x77, 0x6c, 0x6e,
     0x31, 0x50, 0x00
 };
+
+static char ack_x0[] = {
+    0x30, 0x00
+};
+
 
 /* General ACK 1 */
 static char ack_x1[] = {
@@ -44,6 +55,7 @@ static char finish_login[] = {
 
 static int socket_(const char *server);
 static void connect_thread(connect_inst_s *c);
+static void send_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
 int socket_(const char *server)
@@ -121,32 +133,73 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     add_connection(conn);
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
+    pthread_create(&conn->thread, NULL, (void *(*)(void *))send_thread, conn);
 
     return conn;
 }
 
 void connect_thread(connect_inst_s *c)
 {
-    ssize_t len;
+    uint64_t count = 0;
+    ssize_t len, i;
     int sock = c->sock;
     char buf[BUF_SIZE];
     chat_packet_s *packet;    
     
+
     while(1) {
-        send(sock, ack_x1, sizeof(ack_x2), 0);
-        len = recv(sock, buf, sizeof(buf), 0);
+
+       len = recv(sock, buf, sizeof(buf), 0);
+            for(i = 0; i < len; i++)
+                putchar(buf[i]);
+            putchar('\n');
 
         packet = alloc(sizeof(*packet));
         packet->data = alloc(len);
         memcpy(packet->data, buf, len);
 
         if(monitor.inuse) {
+           // printf("Thread Started! %lu\n", len);
+           // fflush(stdout);
             pthread_mutex_lock(&monitor.lock);
+         //   printf("Got Lock!\n");
+          //  fflush(stdout);
             pthread_cond_signal(&monitor.cond);
+            pthread_mutex_unlock(&monitor.lock);
         }
-
+        count++;
     }
 }
+
+void send_thread(connect_inst_s *c)
+{
+    int sock = c->sock;
+    pthread_mutex_t tlock;
+    pthread_cond_t tcond;
+    int rc;
+    struct timespec   ts;
+    struct timeval    tp;
+    
+    
+    rc =  gettimeofday(&tp, NULL);
+
+    
+    /* Convert from timeval to timespec */
+    ts.tv_sec  = tp.tv_sec;
+    ts.tv_nsec = tp.tv_usec * 1000;
+    ts.tv_sec += SLEEP_TIME;
+    
+    pthread_mutex_init(&tlock, NULL);
+    pthread_cond_init(&tcond, NULL);
+
+    
+    while(true) {
+        send(sock, ack_x0, sizeof(ack_x0), 0);
+        send(sock, ack_x1, sizeof(ack_x1), 0);
+        pthread_cond_timedwait(&tcond, &tlock, &ts);
+    }
+}
+
 
 void add_connection(connect_inst_s *c)
 {
@@ -161,6 +214,8 @@ void wait_message(void)
 {
     pthread_mutex_lock(&monitor.lock);
     pthread_cond_wait(&monitor.cond, &monitor.lock);
+    puts("Woke Up~~~");
+    fflush(stdout);
 }
 
 void release_message(void)

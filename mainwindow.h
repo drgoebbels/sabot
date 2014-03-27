@@ -3,12 +3,15 @@
 
 #include <QMainWindow>
 #include <QThread>
+#include <QMutex>
+#include <QWaitCondition>
 
 #include "loginprompt.h"
 
 
 namespace Ui {
     class MonitorThread;
+    class PthreadParent;
     class MapCompare;
     class MainWindow;
 }
@@ -16,13 +19,26 @@ namespace Ui {
 class MonitorThread : public QThread
 {
     Q_OBJECT
+public:
+    MonitorThread(Ui::MainWindow *parent);
 private:
     void run();
+
+    Ui::MainWindow *parent;
 };
 
-class MapCompare {
+class PthreadParent : public QThread
+{
+    Q_OBJECT
 public:
-    bool operator()(std::string& a, std::string& b) {return !!a.compare(b);}
+    PthreadParent(Ui::MainWindow *parent);
+    QMutex mutex;
+    QWaitCondition cond;
+
+private:
+    void run();
+
+    Ui::MainWindow *parent;
 };
 
 class MainWindow : public QMainWindow
@@ -31,6 +47,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+    LoginPrompt *lp;
 
 public slots:
     void postMessage();
@@ -38,14 +55,15 @@ public slots:
     void loginButtonClicked();
     void loginAccept();
 
+
 signals:
     void returnPressed();
     void messageReceived();
 
 private:
     Ui::MainWindow *ui;
-    LoginPrompt *lp;
-    MonitorThread monitor;
+    MonitorThread *monitor;
+    PthreadParent *pthread_parent;
 };
 
 

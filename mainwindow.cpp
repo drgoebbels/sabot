@@ -23,12 +23,15 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    this->lp = NULL;
+    lp = NULL;
     ui->setupUi(this);
+    monitor = new MonitorThread((Ui::MainWindow *)this);
+    pthread_parent = new PthreadParent((Ui::MainWindow *)this);
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
-    monitor.start();
+    monitor->start();
+    pthread_parent->start();
 }
 
 
@@ -47,9 +50,14 @@ void MainWindow::postRemoteMessage()
 
 void MainWindow::loginAccept()
 {
-    std::string username = lp->getUsername().toStdString();
+    /*std::string username = lp->getUsername().toStdString();
     std::string password = lp->getPassword().toStdString();
-    login(sanet_servers[lp->getServerListIndex()][1], username.c_str(), password.c_str());
+    login(sanet_servers[lp->getServerListIndex()][1], username.c_str(), password.c_str()); */
+    pthread_parent->mutex.lock();
+    pthread_parent->cond.wakeAll();
+    pthread_parent->mutex.unlock();
+    puts("Sent Signal");
+    fflush(stdout);
 }
 
 void MainWindow::loginButtonClicked()
@@ -63,12 +71,45 @@ void MainWindow::loginButtonClicked()
     lp->activateWindow();
 }
 
+MonitorThread::MonitorThread(Ui::MainWindow *parent)
+{
+    this->parent = parent;
+}
+
 void MonitorThread::run()
 {
-    while(true) {
+    int i = 0;
+    monitor.inuse = 1;
+    forever {
         wait_message();
-
+        printf("%p %i\n", parent, i);
+        i++;
+        fflush(stdout);
         release_message();
+    }
+}
+
+PthreadParent::PthreadParent(Ui::MainWindow *parent)
+{
+    this->parent = parent;
+}
+
+void PthreadParent::run()
+{
+    MainWindow *mwp = (MainWindow *)this->parent;
+    std::string username;
+    std::string password;
+
+    forever {
+        mutex.lock();
+        cond.wait(&mutex);
+        username = mwp->lp->getUsername().toStdString();
+        password = mwp->lp->getPassword().toStdString();
+        puts("Woke UP");
+
+        login(sanet_servers[mwp->lp->getServerListIndex()][1], username.c_str(), password.c_str());
+        printf("logged in called\n");
+        fflush(stdout);
     }
 }
 
