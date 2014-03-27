@@ -109,7 +109,6 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     
     sock = socket_(server);
     
-    
     send(sock, init_send, sizeof(init_send), 0);
     recv(sock, buf, sizeof(buf), 0);
     
@@ -148,22 +147,17 @@ void connect_thread(connect_inst_s *c)
     
 
     while(1) {
-
        len = recv(sock, buf, sizeof(buf), 0);
             for(i = 0; i < len; i++)
                 putchar(buf[i]);
-            putchar('\n');
+        puts("\n\n");
 
         packet = alloc(sizeof(*packet));
         packet->data = alloc(len);
         memcpy(packet->data, buf, len);
 
         if(monitor.inuse) {
-           // printf("Thread Started! %lu\n", len);
-           // fflush(stdout);
             pthread_mutex_lock(&monitor.lock);
-         //   printf("Got Lock!\n");
-          //  fflush(stdout);
             pthread_cond_signal(&monitor.cond);
             pthread_mutex_unlock(&monitor.lock);
         }
@@ -180,10 +174,8 @@ void send_thread(connect_inst_s *c)
     struct timespec   ts;
     struct timeval    tp;
     
-    
     rc =  gettimeofday(&tp, NULL);
 
-    
     /* Convert from timeval to timespec */
     ts.tv_sec  = tp.tv_sec;
     ts.tv_nsec = tp.tv_usec * 1000;
@@ -192,14 +184,12 @@ void send_thread(connect_inst_s *c)
     pthread_mutex_init(&tlock, NULL);
     pthread_cond_init(&tcond, NULL);
 
-    
     while(true) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
         send(sock, ack_x1, sizeof(ack_x1), 0);
         pthread_cond_timedwait(&tcond, &tlock, &ts);
     }
 }
-
 
 void add_connection(connect_inst_s *c)
 {
@@ -214,8 +204,6 @@ void wait_message(void)
 {
     pthread_mutex_lock(&monitor.lock);
     pthread_cond_wait(&monitor.cond, &monitor.lock);
-    puts("Woke Up~~~");
-    fflush(stdout);
 }
 
 void release_message(void)

@@ -737,8 +737,6 @@ inline void AddRoundKey(aesblock_s *state, word_u *w)
 #undef ADDROUND_COL
 }
 
-
-
 inline void KeyExpansion(uint8_t *key, word_u *w)
 {
     unsigned i = 0;
@@ -787,7 +785,6 @@ aes_digest_s *aes_decrypt(void *message, size_t len, char *key)
     
     aes_block_decrypt(message, digest, keysched);
     return (aes_digest_s *)digest;
-
 }
 
 void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)

@@ -26,12 +26,10 @@ MainWindow::MainWindow(QWidget *parent) :
     lp = NULL;
     ui->setupUi(this);
     monitor = new MonitorThread((Ui::MainWindow *)this);
-    pthread_parent = new PthreadParent((Ui::MainWindow *)this);
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
     monitor->start();
-    pthread_parent->start();
 }
 
 
@@ -50,14 +48,9 @@ void MainWindow::postRemoteMessage()
 
 void MainWindow::loginAccept()
 {
-    /*std::string username = lp->getUsername().toStdString();
+    std::string username = lp->getUsername().toStdString();
     std::string password = lp->getPassword().toStdString();
-    login(sanet_servers[lp->getServerListIndex()][1], username.c_str(), password.c_str()); */
-    pthread_parent->mutex.lock();
-    pthread_parent->cond.wakeAll();
-    pthread_parent->mutex.unlock();
-    puts("Sent Signal");
-    fflush(stdout);
+    login(sanet_servers[lp->getServerListIndex()][1], username.c_str(), password.c_str());
 }
 
 void MainWindow::loginButtonClicked()
@@ -82,36 +75,11 @@ void MonitorThread::run()
     monitor.inuse = 1;
     forever {
         wait_message();
-        printf("%p %i\n", parent, i);
-        i++;
-        fflush(stdout);
+
         release_message();
     }
 }
 
-PthreadParent::PthreadParent(Ui::MainWindow *parent)
-{
-    this->parent = parent;
-}
-
-void PthreadParent::run()
-{
-    MainWindow *mwp = (MainWindow *)this->parent;
-    std::string username;
-    std::string password;
-
-    forever {
-        mutex.lock();
-        cond.wait(&mutex);
-        username = mwp->lp->getUsername().toStdString();
-        password = mwp->lp->getPassword().toStdString();
-        puts("Woke UP");
-
-        login(sanet_servers[mwp->lp->getServerListIndex()][1], username.c_str(), password.c_str());
-        printf("logged in called\n");
-        fflush(stdout);
-    }
-}
 
 MainWindow::~MainWindow()
 {

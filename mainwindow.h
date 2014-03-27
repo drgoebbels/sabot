@@ -27,20 +27,6 @@ private:
     Ui::MainWindow *parent;
 };
 
-class PthreadParent : public QThread
-{
-    Q_OBJECT
-public:
-    PthreadParent(Ui::MainWindow *parent);
-    QMutex mutex;
-    QWaitCondition cond;
-
-private:
-    void run();
-
-    Ui::MainWindow *parent;
-};
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -63,7 +49,6 @@ signals:
 private:
     Ui::MainWindow *ui;
     MonitorThread *monitor;
-    PthreadParent *pthread_parent;
 };
 
 
