@@ -121,9 +121,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     add_connection(conn);
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
-    
-    pthread_join(conn->thread, NULL);
-    
+
     return conn;
 }
 

@@ -15,13 +15,16 @@ public:
     explicit LoginPrompt(QWidget *parent = 0);
     ~LoginPrompt();
 
-    const char *getUsername();
-    const char *getPassword();
-    const char *getServer();
+    QString getUsername();
+    QString getPassword();
+    QString getServer();
+    int getServerListIndex();
     void reset();
 
 private slots:
     void on_login_clicked();
+
+    void on_cancel_pressed();
 
 private:
     Ui::LoginPrompt *ui;

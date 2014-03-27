@@ -2,12 +2,28 @@
 #include "ui_mainwindow.h"
 #include "sanet.h"
 
-#include "loginprompt.h"
+/*
+ * Not Where I wanted to place this, but so far this is
+ * a way to avoid C & C++ compiler conflicts.
+ */
+const char *sanet_servers[][2] = {
+    {"2D Central", S_2D_CENTRAL},
+    {"Paper Thin City", S_PAPER_THIN},
+    {"Fine Line Island", S_FINE_LINE},
+    {"U of SA", S_U_OF_SA},
+    {"Flat World", S_FLAT_WORLD},
+    {"Planar Outpost", S_PLANAR_OUTPOST},
+    {"Mobius Metropolis", S_MOBIUS_METROPOLIS},
+    {"EU Amsterdam", S_AMSTERDAM},
+    {"Compatibility", S_COMPATABILITY},
+    {"SS Lineage", S_SS_LINEAGE}
+};
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    this->lp = NULL;
     ui->setupUi(this);
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
@@ -29,15 +45,22 @@ void MainWindow::postRemoteMessage()
 
 }
 
+void MainWindow::loginAccept()
+{
+    std::string username = lp->getUsername().toStdString();
+    std::string password = lp->getPassword().toStdString();
+    login(sanet_servers[lp->getServerListIndex()][1], username.c_str(), password.c_str());
+}
+
 void MainWindow::loginButtonClicked()
 {
-    LoginPrompt lp(this);
-    lp.exec();
-
-    printf("Server: %s\tUsername: %s\tPassword: %s\n", lp.getServer(), lp.getUsername(), lp.getPassword());
-
-    login(lp.getServer(), lp.getUsername(), lp.getPassword());
-    lp.reset();
+    if(!lp) {
+        lp = new LoginPrompt(this);
+        connect(lp, SIGNAL(accepted()), this, SLOT(loginAccept()));
+    }
+    lp->show();
+    lp->raise();
+    lp->activateWindow();
 }
 
 void MonitorThread::run()

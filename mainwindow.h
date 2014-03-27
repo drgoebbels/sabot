@@ -4,8 +4,12 @@
 #include <QMainWindow>
 #include <QThread>
 
+#include "loginprompt.h"
+
+
 namespace Ui {
     class MonitorThread;
+    class MapCompare;
     class MainWindow;
 }
 
@@ -16,6 +20,10 @@ private:
     void run();
 };
 
+class MapCompare {
+public:
+    bool operator()(std::string& a, std::string& b) {return !!a.compare(b);}
+};
 
 class MainWindow : public QMainWindow
 {
@@ -28,14 +36,15 @@ public slots:
     void postMessage();
     void postRemoteMessage();
     void loginButtonClicked();
+    void loginAccept();
 
 signals:
     void returnPressed();
     void messageReceived();
 
-
 private:
     Ui::MainWindow *ui;
+    LoginPrompt *lp;
     MonitorThread monitor;
 };
 

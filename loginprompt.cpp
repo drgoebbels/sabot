@@ -8,24 +8,29 @@ LoginPrompt::LoginPrompt(QWidget *parent) :
     ui->setupUi(this);
 }
 
-const char *LoginPrompt::getUsername()
+QString LoginPrompt::getUsername()
 {
-    return ui->username->text().toStdString().c_str();
+    return ui->username->text();
 }
 
-const char *LoginPrompt::getPassword()
+QString LoginPrompt::getPassword()
 {
-    return ui->password->text().toStdString().c_str();
+    return ui->password->text();
 }
 
-const char *LoginPrompt::getServer()
+QString LoginPrompt::getServer()
 {
-    printf("%d\n", ui->serverList->currentIndex());
-    return ui->serverList->currentText().toStdString().c_str();
+    return ui->serverList->currentText();
+}
+
+int LoginPrompt::getServerListIndex()
+{
+    return ui->serverList->currentIndex();
 }
 
 void LoginPrompt::reset()
 {
+
     ui->password->clear();
 }
 
@@ -37,4 +42,9 @@ LoginPrompt::~LoginPrompt()
 void LoginPrompt::on_login_clicked()
 {
     this->accept();
+}
+
+void LoginPrompt::on_cancel_pressed()
+{
+    this->reject();
 }

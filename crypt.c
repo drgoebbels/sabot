@@ -737,6 +737,8 @@ inline void AddRoundKey(aesblock_s *state, word_u *w)
 #undef ADDROUND_COL
 }
 
+
+
 inline void KeyExpansion(uint8_t *key, word_u *w)
 {
     unsigned i = 0;
