@@ -25,7 +25,7 @@ extern "C" {
 
 #define S_IN_USE            S_2D_CENTRAL
 #define BUF_SIZE 1024
-#define LEXEME_SIZE 32
+#define LEXEME_SIZE 128
 
 typedef struct chatbox_s chatbox_s;
 typedef struct token_s token_s;
@@ -85,6 +85,7 @@ extern connect_inst_s *connlist;
 extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
 extern void wait_message(void);
 extern void release_message(void);
+extern connect_inst_s *get_connectinst(char *uname);
 
 #if defined __cplusplus
 }

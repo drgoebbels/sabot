@@ -14,25 +14,6 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QListWidget" name="chatText">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>10</y>
-      <width>681</width>
-      <height>341</height>
-     </rect>
-    </property>
-    <property name="horizontalScrollBarPolicy">
-     <enum>Qt::ScrollBarAsNeeded</enum>
-    </property>
-    <property name="sizeAdjustPolicy">
-     <enum>QAbstractScrollArea::AdjustToContents</enum>
-    </property>
-    <property name="autoScroll">
-     <bool>false</bool>
-    </property>
-   </widget>
    <widget class="QLineEdit" name="messageBox">
     <property name="geometry">
      <rect>
@@ -55,6 +36,35 @@
     <property name="text">
      <string>add login</string>
     </property>
+   </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>681</width>
+      <height>331</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <property name="tabsClosable">
+     <bool>true</bool>
+    </property>
+    <property name="movable">
+     <bool>true</bool>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>&lt;inactive&gt;</string>
+     </attribute>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Tab 2</string>
+     </attribute>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">

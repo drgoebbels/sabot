@@ -35,8 +35,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::postMessage()
 {
+
     QListWidgetItem *item = new QListWidgetItem(ui->messageBox->text());
-    ui->chatText->addItem(item);
+    ui->userTabs->currentIndex();
+    ui->userTabs->tab
     ui->chatText->scrollToItem(item);
     ui->messageBox->clear();
 }

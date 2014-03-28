@@ -288,3 +288,26 @@ inline bool is_namechar(int c)
             ||
             (c == '.' || c == '_' || c == ',');
 }
+
+void send_message(char *message, int sock)
+{
+    char buf[256];
+    
+    if(strlen(message) > 254) {
+        printf("message too long");
+        return;
+    }
+    buf[0] = '9';
+    strcpy(&buf[1], message);
+    send(sock, buf, strlen(buf)+1, 0);
+}
+
+connect_inst_s *get_connectinst(char *uname)
+{
+    connect_inst_s *c;
+    
+    for(c = connlist; c; c = c->next) {
+        
+    }
+    return NULL;
+}
