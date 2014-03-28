@@ -11,11 +11,21 @@
 #include "general.h"
 #include "sanet.h"
 
-#define SLEEP_TIME  10
+#define SLEEP_TIME  20
 #define BUF_SIZE 1024
+#define LEXEME_SIZE 32
 #define LOGIN_FLAG "09"
 
 #define MAX_UNAME_PASS 20
+
+typedef struct token_s token_s;
+
+struct token_s
+{
+    int type;
+    char lexeme[LEXEME_SIZE];
+    token_s *next;
+};
 
 connect_inst_s *connlist;
 monitor_s monitor = {
@@ -33,10 +43,10 @@ static char init_send[] = {
     0x31, 0x50, 0x00
 };
 
+/* General ACK 0 */
 static char ack_x0[] = {
     0x30, 0x00
 };
-
 
 /* General ACK 1 */
 static char ack_x1[] = {
@@ -57,6 +67,9 @@ static int socket_(const char *server);
 static void connect_thread(connect_inst_s *c);
 static void send_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
+
+static inline int netgetchar(int sock);
+static inline char *nexttoken(int sock);
 
 int socket_(const char *server)
 {
@@ -137,25 +150,16 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     return conn;
 }
 
-void connect_thread(connect_inst_s *c)
+void connect_thread(connect_inst_s *con)
 {
+    int c;
     uint64_t count = 0;
-    ssize_t len, i;
-    int sock = c->sock;
-    char buf[BUF_SIZE];
-    chat_packet_s *packet;    
+    int sock = con->sock;
+    chat_packet_s *packet;
     
-
     while(1) {
-       len = recv(sock, buf, sizeof(buf), 0);
-            for(i = 0; i < len; i++)
-                putchar(buf[i]);
-        puts("\n\n");
 
-        packet = alloc(sizeof(*packet));
-        packet->data = alloc(len);
-        memcpy(packet->data, buf, len);
-
+        
         if(monitor.inuse) {
             pthread_mutex_lock(&monitor.lock);
             pthread_cond_signal(&monitor.cond);
@@ -173,20 +177,21 @@ void send_thread(connect_inst_s *c)
     int rc;
     struct timespec   ts;
     struct timeval    tp;
-    
-    rc =  gettimeofday(&tp, NULL);
-
-    /* Convert from timeval to timespec */
-    ts.tv_sec  = tp.tv_sec;
-    ts.tv_nsec = tp.tv_usec * 1000;
-    ts.tv_sec += SLEEP_TIME;
-    
+        
     pthread_mutex_init(&tlock, NULL);
     pthread_cond_init(&tcond, NULL);
 
     while(true) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
         send(sock, ack_x1, sizeof(ack_x1), 0);
+
+        rc =  gettimeofday(&tp, NULL);
+
+        /* Convert from timeval to timespec */
+        ts.tv_sec  = tp.tv_sec;
+        ts.tv_nsec = tp.tv_usec * 1000;
+        ts.tv_sec += SLEEP_TIME;
+
         pthread_cond_timedwait(&tcond, &tlock, &ts);
     }
 }
@@ -209,4 +214,40 @@ void wait_message(void)
 void release_message(void)
 {
     pthread_mutex_unlock(&monitor.lock);
+}
+
+inline int netgetchar(int sock)
+{
+    static size_t i, len;
+    char buf[BUF_SIZE];
+    
+    if(i == len) {
+        len = recv(sock, buf, sizeof(buf), 0);
+        i = 0;
+    }
+    putchar(buf[i]);
+    return buf[i++];
+}
+
+inline char *nexttoken(int sock)
+{
+    static token_s tok;
+
+    c = netgetchar(sock);
+    switch(c) {
+        case '0':
+            c = netgetchar(sock);
+            if(c == '1') {
+                c = netgetchar(sock);
+                if(c == '_') {
+                    //known to be 1st received item
+                }
+            }
+            else if(c == ';') {
+                //known ot be 2nd received item
+            }
+            break;
+        //case
+    }
+
 }
