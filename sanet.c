@@ -12,7 +12,6 @@
 #include "sanet.h"
 
 #define SLEEP_TIME  20
-#define BUF_SIZE 1024
 #define LEXEME_SIZE 32
 #define LOGIN_FLAG "09"
 
@@ -68,8 +67,8 @@ static void connect_thread(connect_inst_s *c);
 static void send_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
-static inline int netgetchar(int sock);
-static inline char *nexttoken(int sock);
+static inline int netgetchar(connect_inst_s *conn);
+static inline char *nexttoken(connect_inst_s *conn);
 
 int socket_(const char *server)
 {
@@ -140,6 +139,8 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->sock = sock;
     conn->chat.head = NULL;
     conn->chat.tail = NULL;
+    conn->i = 0;
+    conn->len = 0;
     pthread_mutex_init(&conn->chat.lock, NULL);
         
     add_connection(conn);
@@ -216,29 +217,28 @@ void release_message(void)
     pthread_mutex_unlock(&monitor.lock);
 }
 
-inline int netgetchar(int sock)
+inline int netgetchar(connect_inst_s *s)
 {
-    static size_t i, len;
-    char buf[BUF_SIZE];
-    
-    if(i == len) {
-        len = recv(sock, buf, sizeof(buf), 0);
-        i = 0;
+    if(s->i == s->len) {
+        s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
+        s->i = 0;
     }
-    putchar(buf[i]);
-    return buf[i++];
+    putchar(s->buf[s->i]);
+    return s->buf[s->i++];
 }
 
-inline char *nexttoken(int sock)
+/* Not reentrant! */
+inline char *nexttoken(connect_inst_s *s)
 {
+    int c;
     static token_s tok;
 
-    c = netgetchar(sock);
+    c = netgetchar(s);
     switch(c) {
         case '0':
-            c = netgetchar(sock);
+            c = netgetchar(s);
             if(c == '1') {
-                c = netgetchar(sock);
+                c = netgetchar(s);
                 if(c == '_') {
                     //known to be 1st received item
                 }
@@ -249,5 +249,6 @@ inline char *nexttoken(int sock)
             break;
         //case
     }
-
+    return NULL;
 }
+

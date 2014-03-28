@@ -24,6 +24,7 @@ extern "C" {
 #define S_SS_LINEAGE        "74.86.43.10"
 
 #define S_IN_USE            S_2D_CENTRAL
+#define BUF_SIZE 1024
 
 typedef struct chatbox_s chatbox_s;
 typedef struct connect_inst_s connect_inst_s;
@@ -44,6 +45,9 @@ struct connect_inst_s
     int sock;
     chatbox_s chat;
     pthread_t thread;
+    size_t len;
+    size_t i;
+    char buf[BUF_SIZE];
     connect_inst_s *next;
 };
 

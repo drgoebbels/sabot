@@ -30,7 +30,6 @@ int LoginPrompt::getServerListIndex()
 
 void LoginPrompt::reset()
 {
-
     ui->password->clear();
 }
 
