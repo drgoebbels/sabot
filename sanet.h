@@ -25,8 +25,10 @@ extern "C" {
 
 #define S_IN_USE            S_2D_CENTRAL
 #define BUF_SIZE 1024
+#define LEXEME_SIZE 32
 
 typedef struct chatbox_s chatbox_s;
+typedef struct token_s token_s;
 typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
 typedef struct monitor_s monitor_s;
@@ -38,6 +40,14 @@ struct chatbox_s
     chat_packet_s *tail;
 };
 
+    
+struct token_s
+{
+    int type;
+    char lexeme[LEXEME_SIZE];
+    token_s *next;
+};
+    
 struct connect_inst_s
 {
     const char *server;
@@ -48,6 +58,7 @@ struct connect_inst_s
     size_t len;
     size_t i;
     char buf[BUF_SIZE];
+    token_s tok;
     connect_inst_s *next;
 };
 

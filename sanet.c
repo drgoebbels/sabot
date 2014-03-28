@@ -12,19 +12,9 @@
 #include "sanet.h"
 
 #define SLEEP_TIME  20
-#define LEXEME_SIZE 32
 #define LOGIN_FLAG "09"
 
 #define MAX_UNAME_PASS 20
-
-typedef struct token_s token_s;
-
-struct token_s
-{
-    int type;
-    char lexeme[LEXEME_SIZE];
-    token_s *next;
-};
 
 connect_inst_s *connlist;
 monitor_s monitor = {
@@ -69,6 +59,7 @@ static void add_connection(connect_inst_s *c);
 
 static inline int netgetchar(connect_inst_s *conn);
 static inline char *nexttoken(connect_inst_s *conn);
+static inline bool is_namechar(int c);
 
 int socket_(const char *server)
 {
@@ -227,28 +218,73 @@ inline int netgetchar(connect_inst_s *s)
     return s->buf[s->i++];
 }
 
-/* Not reentrant! */
 inline char *nexttoken(connect_inst_s *s)
 {
-    int c;
-    static token_s tok;
+    int c, i = 0, diff;
+    token_s *t = &s->tok;
 
-    c = netgetchar(s);
+#define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
+#define next_char_()    c = netgetchar(s);\
+                        t->lexeme[i++] = c
+
+    next_char_();
     switch(c) {
         case '0':
-            c = netgetchar(s);
+            next_char_();
             if(c == '1') {
-                c = netgetchar(s);
+                next_char_();
                 if(c == '_') {
                     //known to be 1st received item
+
                 }
             }
             else if(c == ';') {
                 //known ot be 2nd received item
             }
             break;
-        //case
+        case 'C':
+            next_char_();
+            if(is_idchar_()) {
+                next_char_();
+                if(is_idchar_()){
+                    next_char_();
+                    if(is_idchar_()) {
+                        //got C<id> item....
+                    }
+                }
+            }
+            break;
+        case 'U':
+            next_char_();
+            if(is_idchar_()) {
+                next_char_();
+                if(is_idchar_()){
+                    next_char_();
+                    if(is_idchar_()) {
+                        //got C<id> item....
+                    }
+                }
+            }
+            do{
+                next_char_();
+                i++;
+            } while(c == '#');
+            diff = MAX_UNAME_PASS-(i-1);
+            break;
+
     }
-    return NULL;
+exit_:
+    t->lexeme[i] = '\0';
+    return t;
+#undef is_idchar_
+#undef next_char_
 }
 
+inline bool is_namechar(int c)
+{
+    return  (c >= 'a' && c <= 'z')
+            ||
+            (c >= '1' && c <= '9')
+            ||
+            (c == '.' || c == '_' || c == ',');
+}
