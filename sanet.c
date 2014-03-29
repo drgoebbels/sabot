@@ -57,6 +57,7 @@ static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
 static inline int netgetchar(connect_inst_s *conn);
+static inline int netpushback(connect_inst_s *conn, int c);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
 static inline bool is_gamenamechar(int c);
@@ -135,6 +136,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->chat.tail = NULL;
     conn->i = 0;
     conn->len = 0;
+    conn->uget = false;
     pthread_mutex_init(&conn->chat.lock, NULL);
         
     add_connection(conn);
@@ -212,6 +214,11 @@ void release_message(void)
 
 inline int netgetchar(connect_inst_s *s)
 {
+    if(s->uget) {
+        s->uget = false;
+        return s->c;
+    }
+
 redo:
     if(s->i == s->len) {
         s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
@@ -227,6 +234,12 @@ redo:
 
     fflush(stdout);
     return s->buf[s->i++];
+}
+
+inline int netpushback(connect_inst_s *conn, int c)
+{
+    conn->c = c;
+    conn->uget = true;
 }
 
 /*
@@ -296,13 +309,18 @@ user_s *parse_uname(connect_inst_s *conn)
     char *lex;
     user_s *u = allocz(sizeof(*u));
 
-#define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
+#define is_idchar_(c) ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
 
     lex = u->id;
 
     *lex++ = netgetchar(conn);
+    assert(is_idchar_(*(lex-1)));
+
     *lex++ = netgetchar(conn);
+    assert(is_idchar_(*(lex-1)));
+
     *lex++ = netgetchar(conn);
+    assert(is_idchar_(*(lex-1)));
 
     while((c = netgetchar(conn)) == '#')
         i++;
@@ -343,6 +361,7 @@ user_s *parse_uname(connect_inst_s *conn)
         *lex++ = c;
         c = netgetchar(conn);
     }
+    netpushback(conn, c);
 
     putchar('\n');
     print_user(u);
