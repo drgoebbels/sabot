@@ -26,12 +26,14 @@ extern "C" {
 #define S_IN_USE            S_2D_CENTRAL
 #define BUF_SIZE 1024
 #define LEXEME_SIZE 128
+#define MAX_UNAME_PASS 20
 
 typedef struct chatbox_s chatbox_s;
 typedef struct token_s token_s;
 typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
 typedef struct monitor_s monitor_s;
+typedef struct user_s user_s;
 
 struct chatbox_s
 {
@@ -76,6 +78,21 @@ struct monitor_s
     pthread_t thread;
     pthread_cond_t cond;
     pthread_mutex_t lock;
+};
+
+struct user_s
+{
+    char id[4];
+    char name[MAX_UNAME_PASS+1];
+    /* These are Still unknown data fields */
+    char field1[32];
+    char field2[32];
+    char field3[32];
+
+    char field4[32];
+    char field5[32];
+    char field6[32];
+    char mod_level[32];
 };
 
 extern monitor_s monitor;

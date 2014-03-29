@@ -3,18 +3,17 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
+#include <assert.h>
 
 #include "general.h"
 #include "sanet.h"
 
 #define SLEEP_TIME  20
 #define LOGIN_FLAG "09"
-
-#define MAX_UNAME_PASS 20
 
 connect_inst_s *connlist;
 monitor_s monitor = {
@@ -61,6 +60,9 @@ static inline int netgetchar(connect_inst_s *conn);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
 static inline bool is_gamenamechar(int c);
+
+static user_s *parse_uname(connect_inst_s *conn);
+static void print_user(user_s *s);
 
 int socket_(const char *server)
 {
@@ -236,30 +238,30 @@ redo:
  * <gamename> := [a-zA-Z]+
  */
 
-inline char *nexttoken(connect_inst_s *s)
-{
-    int c, i = 0, diff;
-    token_s *t = &s->tok;
-    char *lex = t->lexeme;
-
 #define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
 
-    c = netgetchar(s);
+inline char *nexttoken(connect_inst_s *conn)
+{
+    int c, i = 0;
+    token_s *t = &conn->tok;
+    char *lex = t->lexeme;
+
+    c = netgetchar(conn);
     switch(c) {
         case '0':
-            c = netgetchar(s);
+            c = netgetchar(conn);
             if(c == '1') {
-                c = netgetchar(s);
+                c = netgetchar(conn);
                 if(c == '_') {
                     //known to be 1st received item
 
                 }
             }
             else if(c == ';') {
-                c = netgetchar(s);
-                while(is_gamenamechar(c)) {
+                c = netgetchar(conn);
+                while(is_gamenamechar(conn)) {
                     *lex++ = c;
-                    c = netgetchar(s);
+                    c = netgetchar(conn);
                 }
                 if(lex - t->lexeme > 0)
                     *--lex = '\0';
@@ -270,41 +272,101 @@ inline char *nexttoken(connect_inst_s *s)
             }
             break;
         case 'C':
-            c = netgetchar(s);
+            c = netgetchar(conn);
             if(is_idchar_()) {
-                c = netgetchar(s);
+                c = netgetchar(conn);
                 if(is_idchar_()){
-                    c = netgetchar(s);
-                    if(is_idchar_()) {
-                        //got C<id> item....
-                    }
+                    c = netgetchar(conn);
                 }
             }
             break;
         case 'U':
-            c = netgetchar(s);
-            if(is_idchar_()) {
-                c = netgetchar(s);
-                if(is_idchar_()){
-                    c = netgetchar(s);
-                    if(is_idchar_()) {
-                        //got C<id> item....
-                    }
-                }
-            }
-            do{
-                c = netgetchar(s);
-                i++;
-            } while(c == '#');
-            diff = MAX_UNAME_PASS-(i-1);
+            parse_uname(conn);
             break;
 
     }
 exit_:
     t->lexeme[i] = '\0';
     return t;
-#undef is_idchar_
 }
+
+user_s *parse_uname(connect_inst_s *conn)
+{
+    int c, i = 0, diff;
+    char *lex;
+    user_s *u = allocz(sizeof(*u));
+
+#define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
+
+    lex = u->id;
+
+    *lex++ = netgetchar(conn);
+    *lex++ = netgetchar(conn);
+    *lex++ = netgetchar(conn);
+
+    while((c = netgetchar(conn)) == '#')
+        i++;
+    diff = MAX_UNAME_PASS-i-1;
+
+    lex = u->name;
+    *lex++ = c;
+    for(i = 0; i < diff; i++)
+        *lex++ = netgetchar(conn);
+
+    lex = u->field1;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->field2;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->field3;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->field4;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->field5;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->field6;
+    while((c = netgetchar(conn)) != ';')
+        *lex++ = c;
+
+    lex = u->mod_level;
+    c = netgetchar(conn);
+    while(c >= '0' && c <= '9') {
+        *lex++ = c;
+        c = netgetchar(conn);
+    }
+
+    putchar('\n');
+    print_user(u);
+    fflush(stdout);
+    return u;
+}
+
+#undef is_idchar_
+
+void print_user(user_s *s)
+{
+    printf("user: %s %s %s %s %s %s %s %s %s\n",
+           s->id,
+           s->name,
+           s->field1,
+           s->field2,
+           s->field3,
+           s->field4,
+           s->field5,
+           s->field6,
+           s->mod_level
+           );
+}
+
 
 inline bool is_namechar(int c)
 {
