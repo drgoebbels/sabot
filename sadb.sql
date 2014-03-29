@@ -86,6 +86,11 @@ CREATE TABLE account(
 	password VARCHAR(20)
 );
 
+CREATE TABLE aes_key(
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	
+	);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO sabot.server(name, ip) VALUES('2-Dimensional Central', INET_ATON('74.86.43.9'));

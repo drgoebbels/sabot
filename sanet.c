@@ -54,12 +54,13 @@ static char finish_login[] = {
 
 static int socket_(const char *server);
 static void connect_thread(connect_inst_s *c);
-static void send_thread(connect_inst_s *c);
+static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
 static inline int netgetchar(connect_inst_s *conn);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
+static inline bool is_gamenamechar(int c);
 
 int socket_(const char *server)
 {
@@ -137,7 +138,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     add_connection(conn);
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
-    pthread_create(&conn->thread, NULL, (void *(*)(void *))send_thread, conn);
+    pthread_create(&conn->thread, NULL, (void *(*)(void *))ack_thread, conn);
 
     return conn;
 }
@@ -150,8 +151,7 @@ void connect_thread(connect_inst_s *con)
     chat_packet_s *packet;
     
     while(1) {
-
-        
+        nexttoken(con);
         if(monitor.inuse) {
             pthread_mutex_lock(&monitor.lock);
             pthread_cond_signal(&monitor.cond);
@@ -161,7 +161,7 @@ void connect_thread(connect_inst_s *con)
     }
 }
 
-void send_thread(connect_inst_s *c)
+void ack_thread(connect_inst_s *c)
 {
     int sock = c->sock;
     pthread_mutex_t tlock;
@@ -175,7 +175,7 @@ void send_thread(connect_inst_s *c)
 
     while(true) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
-        send(sock, ack_x1, sizeof(ack_x1), 0);
+        send(sock, ack_x2, sizeof(ack_x2), 0);
 
         rc =  gettimeofday(&tp, NULL);
 
@@ -210,44 +210,71 @@ void release_message(void)
 
 inline int netgetchar(connect_inst_s *s)
 {
+redo:
     if(s->i == s->len) {
         s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
         s->i = 0;
     }
+    if(!s->buf[s->i]) {
+        s->i++;
+        goto redo;
+    }
+
     putchar(s->buf[s->i]);
+    //printf("%c~%u   ", s->buf[s->i]);
+
+    fflush(stdout);
     return s->buf[s->i++];
 }
+
+/*
+ * <uname> := U<id>#*[a-zA-Z_.,]+;[\d]+;[\d]+;[\d]+;[\d]+[\d]+;0
+ * <id> := \d\d\d
+ * <conn> := C<id>
+ * <gamelist> := 0; <gamelist'>
+ * <gamelist'> := <gamename>; <gamelist'> | E
+ * <gamename> := [a-zA-Z]+
+ */
 
 inline char *nexttoken(connect_inst_s *s)
 {
     int c, i = 0, diff;
     token_s *t = &s->tok;
+    char *lex = t->lexeme;
 
 #define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
-#define next_char_()    c = netgetchar(s);\
-                        t->lexeme[i++] = c
 
-    next_char_();
+    c = netgetchar(s);
     switch(c) {
         case '0':
-            next_char_();
+            c = netgetchar(s);
             if(c == '1') {
-                next_char_();
+                c = netgetchar(s);
                 if(c == '_') {
                     //known to be 1st received item
 
                 }
             }
             else if(c == ';') {
-                //known ot be 2nd received item
+                c = netgetchar(s);
+                while(is_gamenamechar(c)) {
+                    *lex++ = c;
+                    c = netgetchar(s);
+                }
+                if(lex - t->lexeme > 0)
+                    *--lex = '\0';
+                else
+                    *lex = '\0';
+
+                printf("\n\ngame name: %s\n\n", t->lexeme);
             }
             break;
         case 'C':
-            next_char_();
+            c = netgetchar(s);
             if(is_idchar_()) {
-                next_char_();
+                c = netgetchar(s);
                 if(is_idchar_()){
-                    next_char_();
+                    c = netgetchar(s);
                     if(is_idchar_()) {
                         //got C<id> item....
                     }
@@ -255,18 +282,18 @@ inline char *nexttoken(connect_inst_s *s)
             }
             break;
         case 'U':
-            next_char_();
+            c = netgetchar(s);
             if(is_idchar_()) {
-                next_char_();
+                c = netgetchar(s);
                 if(is_idchar_()){
-                    next_char_();
+                    c = netgetchar(s);
                     if(is_idchar_()) {
                         //got C<id> item....
                     }
                 }
             }
             do{
-                next_char_();
+                c = netgetchar(s);
                 i++;
             } while(c == '#');
             diff = MAX_UNAME_PASS-(i-1);
@@ -277,7 +304,6 @@ exit_:
     t->lexeme[i] = '\0';
     return t;
 #undef is_idchar_
-#undef next_char_
 }
 
 inline bool is_namechar(int c)
@@ -286,8 +312,20 @@ inline bool is_namechar(int c)
             ||
             (c >= '1' && c <= '9')
             ||
-            (c == '.' || c == '_' || c == ',');
+            (c == '.' || c == '_' || c == ',')
+            ||
+            (c >= 'A' && c <= 'Z');
 }
+
+inline bool is_gamenamechar(int c)
+{
+    return  (c >= 'a' && c <= 'z')
+            ||
+            (c >= '0' && c <= '9')
+            ||
+            c == '.' || c == ',' || c == ' ';
+}
+
 
 void send_message(char *message, int sock)
 {
