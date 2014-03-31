@@ -348,7 +348,6 @@ inline char *nexttoken(connect_inst_s *conn)
             }
             pthread_mutex_unlock(&chptr->lock);
             
-            pthread_mutex_lock(&monitor.lock);
             pthread_cond_signal(&monitor.cond);
             pthread_mutex_unlock(&monitor.lock);
             break;
