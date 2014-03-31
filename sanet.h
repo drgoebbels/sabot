@@ -46,7 +46,6 @@ struct chatbox_s
     chat_packet_s *head;
     chat_packet_s *tail;
 };
-
     
 struct token_s
 {
@@ -73,8 +72,9 @@ struct connect_inst_s
 
 struct chat_packet_s
 {
+    bool is_consumed;
     user_s *user;
-    char message[148];
+    char text[148];
     chat_packet_s *next;
     chat_packet_s *prev;
 };
@@ -124,6 +124,8 @@ extern connect_inst_s *login(const char *server, const char *uname, const char *
 extern void wait_message(void);
 extern void release_message(void);
 extern connect_inst_s *get_connectinst(char *uname);
+extern inline void msg_lock(connect_inst_s *conn);
+extern inline void msg_unlock(connect_inst_s *conn);
     
 extern void adduser(user_s *u);
 extern user_s *userlookup(char *uid);

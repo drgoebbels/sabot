@@ -7,7 +7,7 @@
 #include <QWaitCondition>
 
 #include "loginprompt.h"
-
+#include "sanet.h"
 
 namespace Ui {
     class MonitorThread;
@@ -19,6 +19,9 @@ namespace Ui {
 class MonitorThread : public QThread
 {
     Q_OBJECT
+signals:
+    void messageReceived(connect_inst_s *conn);
+
 public:
     MonitorThread(Ui::MainWindow *parent);
 private:
@@ -37,13 +40,12 @@ public:
 
 public slots:
     void postMessage();
-    void postRemoteMessage();
+    void postRemoteMessage(connect_inst_s *conn);
     void loginButtonClicked();
     void loginAccept();
 
 signals:
     void returnPressed();
-    void messageReceived();
 
 private:
     Ui::MainWindow *ui;

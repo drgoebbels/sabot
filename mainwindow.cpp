@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "sanet.h"
+
+#include <QListWidget>
 
 /*
  * Not Where I wanted to place this, but so far this is
@@ -30,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
+    connect(monitor, SIGNAL(messageReceived(connect_inst_s *)), this, SLOT(postRemoteMessage(connect_inst_s *)));
     monitor->start();
 }
 
@@ -42,9 +44,16 @@ void MainWindow::postMessage()
     ui->messageBox->clear();*/
 }
 
-void MainWindow::postRemoteMessage()
+void MainWindow::postRemoteMessage(connect_inst_s *conn)
 {
+    QWidget *list = this->ui->serverTabs->currentWidget();
 
+    if(list) {
+        puts(list->whatsThis().toStdString().c_str());
+        fflush(stdout);
+    }
+
+    ///list->addItem(conn->chat.tail->text);
 }
 
 void MainWindow::loginAccept()
@@ -90,8 +99,28 @@ void MonitorThread::run()
 {
     int i = 0;
     monitor.inuse = 1;
+    connect_inst_s *conn, *backup;
+
     forever {
         wait_message();
+
+        //check for messages
+        conn = connlist;
+        while(conn) {
+            msg_lock(conn);
+            printf("%p, %p\n", conn, connlist);
+            fflush(stdout);
+            printf("%p\n", conn->chat.tail);
+            fflush(stdout);
+            if(conn->chat.tail && !conn->chat.tail->is_consumed) {
+                conn->chat.tail->is_consumed = true;
+                emit messageReceived(conn);
+            }
+            backup = conn;
+            conn = conn->next;
+            msg_unlock(backup);
+        }
+
 
         release_message();
     }

@@ -138,11 +138,12 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->sock = sock;
     conn->chat.head = NULL;
     conn->chat.tail = NULL;
+    pthread_mutex_init(&conn->chat.lock, NULL);
+
     conn->i = 0;
     conn->len = 0;
     conn->uget = false;
-    pthread_mutex_init(&conn->chat.lock, NULL);
-        
+    
     add_connection(conn);
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
@@ -261,6 +262,7 @@ inline char *nexttoken(connect_inst_s *conn)
     token_s *t = &conn->tok;
     char *name = "not found";
     chat_packet_s *message;
+    chatbox_s *chptr;
     char *lex = t->lexeme, *back;
     
     /* temp user to prevent segfaults in processing */
@@ -268,8 +270,6 @@ inline char *nexttoken(connect_inst_s *conn)
     
     if(!blank)
         blank = allocz(sizeof(*blank));
-    
-    
 
     c = netgetchar(conn);
     switch(c) {
@@ -316,7 +316,6 @@ inline char *nexttoken(connect_inst_s *conn)
             *lex++ = netgetchar(conn);
             *lex = '\0';
             
-            
             u = userlookup(t->lexeme);
             if(u) {
                 name = u->name;
@@ -328,10 +327,30 @@ inline char *nexttoken(connect_inst_s *conn)
             c = netgetchar(conn);
             
             /* get message content */
-            lex = message->message;
+            lex = message->text;
             while((*lex++ = netgetchar(conn)));
-            printf("%s: %s\n", name, t->lexeme);
-            fflush(stdout);
+
+            pthread_mutex_lock(&monitor.lock);
+            chptr = &conn->chat;
+            message->is_consumed = false;
+            message->next = NULL;
+            
+            pthread_mutex_lock(&chptr->lock);
+            if(chptr->head) {
+                message->prev = chptr->tail;
+                chptr->tail->next = message;
+                chptr->tail = message;
+            }
+            else {
+                message->prev = NULL;
+                chptr->head = message;
+                chptr->tail = message;
+            }
+            pthread_mutex_unlock(&chptr->lock);
+            
+            pthread_mutex_lock(&monitor.lock);
+            pthread_cond_signal(&monitor.cond);
+            pthread_mutex_unlock(&monitor.lock);
             break;
         case 'D':
             *lex++ = netgetchar(conn);
@@ -433,7 +452,6 @@ void print_user(user_s *s)
            );
 }
 
-
 inline bool is_namechar(int c)
 {
     return  (c >= 'a' && c <= 'z')
@@ -454,6 +472,15 @@ inline bool is_gamenamechar(int c)
             c == '.' || c == ',' || c == ' ' || c == '!';
 }
 
+inline void msg_lock(connect_inst_s *conn)
+{
+    pthread_mutex_lock(&conn->chat.lock);
+}
+
+inline void msg_unlock(connect_inst_s *conn)
+{
+    pthread_mutex_unlock(&conn->chat.lock);
+}
 
 void send_message(char *message, int sock)
 {
@@ -500,11 +527,12 @@ void adduser(user_s *u)
         tmp = *(uint16_t *)rec->user->id;
         if(k == tmp)
             return;
-        rec->next = alloc(sizeof(*rec));
+        rec->next = n;
     }
     else {
         sanet_users.table[index] = n;
     }
+    sanet_users.size++;
 }
 
 user_s *userlookup(char *uid)
@@ -566,4 +594,3 @@ uint16_t uid_hash(char *uid)
     }
     return h % UID_TABLE_SIZE;
 }
-
