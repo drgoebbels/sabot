@@ -27,6 +27,7 @@ extern "C" {
 #define BUF_SIZE 1024
 #define LEXEME_SIZE 128
 #define MAX_UNAME_PASS 20
+#define UID_TABLE_SIZE 53
 
 typedef struct chatbox_s chatbox_s;
 typedef struct token_s token_s;
@@ -34,6 +35,10 @@ typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
 typedef struct monitor_s monitor_s;
 typedef struct user_s user_s;
+    
+typedef struct uid_record_s uid_record_s;
+typedef struct uid_hash_s uid_hash_s;
+
 
 struct chatbox_s
 {
@@ -68,8 +73,8 @@ struct connect_inst_s
 
 struct chat_packet_s
 {
-    size_t size;
-    char *data;
+    user_s *user;
+    char message[148];
     chat_packet_s *next;
     chat_packet_s *prev;
 };
@@ -94,9 +99,23 @@ struct user_s
     char field4[32];
     char field5[32];
     char field6[32];
-    char mod_level[32];
+    char mod_level;
+};
+    
+struct uid_record_s
+{
+    user_s *user;
+    uid_record_s *next;
 };
 
+struct uid_hash_s
+{
+    int size;
+    uid_record_s *table[UID_TABLE_SIZE];
+};
+    
+extern uid_hash_s sanet_users;
+    
 extern monitor_s monitor;
 
 extern connect_inst_s *connlist;
@@ -105,6 +124,10 @@ extern connect_inst_s *login(const char *server, const char *uname, const char *
 extern void wait_message(void);
 extern void release_message(void);
 extern connect_inst_s *get_connectinst(char *uname);
+    
+extern void adduser(user_s *u);
+extern user_s *userlookup(char *uid);
+extern void deleteuser(char *uid);
 
 #if defined __cplusplus
 }

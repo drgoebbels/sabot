@@ -41,7 +41,6 @@ public slots:
     void loginButtonClicked();
     void loginAccept();
 
-
 signals:
     void returnPressed();
     void messageReceived();

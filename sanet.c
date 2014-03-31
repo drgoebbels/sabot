@@ -15,6 +15,8 @@
 #define SLEEP_TIME  20
 #define LOGIN_FLAG "09"
 
+uid_hash_s sanet_users;
+
 connect_inst_s *connlist;
 monitor_s monitor = {
     .inuse = 0,
@@ -57,13 +59,15 @@ static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
 static inline int netgetchar(connect_inst_s *conn);
-static inline int netpushback(connect_inst_s *conn, int c);
+static inline void netpushback(connect_inst_s *conn, int c);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
 static inline bool is_gamenamechar(int c);
 
 static user_s *parse_uname(connect_inst_s *conn);
 static void print_user(user_s *s);
+
+static uint16_t uid_hash(char *uid);
 
 int socket_(const char *server)
 {
@@ -216,27 +220,24 @@ inline int netgetchar(connect_inst_s *s)
 {
     if(s->uget) {
         s->uget = false;
+        putchar(s->c);
+        fflush(stdout);
+
         return s->c;
     }
-
-redo:
     if(s->i == s->len) {
         s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
         s->i = 0;
     }
-    if(!s->buf[s->i]) {
-        s->i++;
-        goto redo;
-    }
+    //printf("%c~%u   ", s->buf[s->i], s->buf[s->i]);
+    //putchar(s->buf[s->i]);
+    //fflush(stdout);
 
-    putchar(s->buf[s->i]);
-    //printf("%c~%u   ", s->buf[s->i]);
-
-    fflush(stdout);
+    //putchar(s->buf[s->i]);
     return s->buf[s->i++];
 }
 
-inline int netpushback(connect_inst_s *conn, int c)
+inline void netpushback(connect_inst_s *conn, int c)
 {
     conn->c = c;
     conn->uget = true;
@@ -255,9 +256,20 @@ inline int netpushback(connect_inst_s *conn, int c)
 
 inline char *nexttoken(connect_inst_s *conn)
 {
+    user_s *u;
     int c, i = 0;
     token_s *t = &conn->tok;
-    char *lex = t->lexeme;
+    char *name = "not found";
+    chat_packet_s *message;
+    char *lex = t->lexeme, *back;
+    
+    /* temp user to prevent segfaults in processing */
+    static user_s *blank = NULL;
+    
+    if(!blank)
+        blank = allocz(sizeof(*blank));
+    
+    
 
     c = netgetchar(conn);
     switch(c) {
@@ -271,17 +283,15 @@ inline char *nexttoken(connect_inst_s *conn)
                 }
             }
             else if(c == ';') {
-                c = netgetchar(conn);
-                while(is_gamenamechar(conn)) {
+                while(is_gamenamechar(c = netgetchar(conn)))
                     *lex++ = c;
-                    c = netgetchar(conn);
-                }
+
                 if(lex - t->lexeme > 0)
                     *--lex = '\0';
                 else
                     *lex = '\0';
-
-                printf("\n\ngame name: %s\n\n", t->lexeme);
+                //netpushback(conn, c);
+                //printf("\n\ngame name: %s\n\n", t->lexeme);
             }
             break;
         case 'C':
@@ -294,7 +304,50 @@ inline char *nexttoken(connect_inst_s *conn)
             }
             break;
         case 'U':
-            parse_uname(conn);
+            u = parse_uname(conn);
+            adduser(u);
+            break;
+        case 'M':
+            message = alloc(sizeof(*message));
+            
+            /* get id of messager */
+            *lex++ = netgetchar(conn);
+            *lex++ = netgetchar(conn);
+            *lex++ = netgetchar(conn);
+            *lex = '\0';
+            
+            
+            u = userlookup(t->lexeme);
+            if(u) {
+                name = u->name;
+                message->user = u;
+            }
+            else
+                message->user = blank;
+            /* get type of message */
+            c = netgetchar(conn);
+            
+            /* get message content */
+            lex = message->message;
+            while((*lex++ = netgetchar(conn)));
+            printf("%s: %s\n", name, t->lexeme);
+            fflush(stdout);
+            break;
+        case 'D':
+            *lex++ = netgetchar(conn);
+            *lex++ = netgetchar(conn);
+            *lex++ = netgetchar(conn);
+            *lex = '\0';
+            
+            u = userlookup(t->lexeme);
+            if(u) {
+                name = u->name;
+                printf("%s disconnected from lobby\n", name);
+                deleteuser(t->lexeme);
+            }
+            break;
+        default:
+            
             break;
 
     }
@@ -305,11 +358,11 @@ exit_:
 
 user_s *parse_uname(connect_inst_s *conn)
 {
+#define is_idchar_(c) ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
+
     int c, i = 0, diff;
     char *lex;
     user_s *u = allocz(sizeof(*u));
-
-#define is_idchar_(c) ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
 
     lex = u->id;
 
@@ -355,13 +408,7 @@ user_s *parse_uname(connect_inst_s *conn)
     while((c = netgetchar(conn)) != ';')
         *lex++ = c;
 
-    lex = u->mod_level;
-    c = netgetchar(conn);
-    while(c >= '0' && c <= '9') {
-        *lex++ = c;
-        c = netgetchar(conn);
-    }
-    netpushback(conn, c);
+    u->mod_level = netgetchar(conn);
 
     putchar('\n');
     print_user(u);
@@ -373,7 +420,7 @@ user_s *parse_uname(connect_inst_s *conn)
 
 void print_user(user_s *s)
 {
-    printf("user: %s %s %s %s %s %s %s %s %s\n",
+    printf("user: %s %s %s %s %s %s %s %s %c\n",
            s->id,
            s->name,
            s->field1,
@@ -391,7 +438,7 @@ inline bool is_namechar(int c)
 {
     return  (c >= 'a' && c <= 'z')
             ||
-            (c >= '1' && c <= '9')
+            (c >= '0' && c <= '9')
             ||
             (c == '.' || c == '_' || c == ',')
             ||
@@ -404,7 +451,7 @@ inline bool is_gamenamechar(int c)
             ||
             (c >= '0' && c <= '9')
             ||
-            c == '.' || c == ',' || c == ' ';
+            c == '.' || c == ',' || c == ' ' || c == '!';
 }
 
 
@@ -430,3 +477,93 @@ connect_inst_s *get_connectinst(char *uname)
     }
     return NULL;
 }
+
+void adduser(user_s *u)
+{
+    uint16_t index = uid_hash(u->id);
+    uint16_t k = *(uint16_t *)u->id, tmp; /* ,,|,, strict aliasing */
+    uid_record_s *rec = sanet_users.table[index], *n;
+    
+    n = alloc(sizeof(*n));
+    n->user = u;
+    n->next = NULL;
+    if(rec) {
+        tmp = *(uint16_t *)rec->user->id;
+        if(k == tmp)
+            return;
+        while(rec->next) {
+            tmp = *(uint16_t *)rec->user->id;
+            if(k == tmp)
+                return;
+            rec = rec->next;
+        }
+        tmp = *(uint16_t *)rec->user->id;
+        if(k == tmp)
+            return;
+        rec->next = alloc(sizeof(*rec));
+    }
+    else {
+        sanet_users.table[index] = n;
+    }
+}
+
+user_s *userlookup(char *uid)
+{
+    uint16_t k = *(uint16_t *)uid, tmp;
+    uid_record_s *rec = sanet_users.table[uid_hash(uid)];
+    
+    while(rec) {
+        tmp = *(uint16_t *)rec->user->id;
+        if(k == tmp)
+            return rec->user;
+        rec = rec->next;
+    }
+    return NULL;
+}
+
+void deleteuser(char *uid)
+{
+    uint16_t index = uid_hash(uid);
+    uint16_t k = *(uint16_t *)uid, tmp;
+    uid_record_s *rec = sanet_users.table[index], *last = NULL;
+    
+    while(rec) {
+        tmp = *(uint16_t *)rec->user->id;
+        if(k == tmp) {
+            if(last) {
+                last->next = rec->next;
+                free(rec);
+            }
+            else {
+                sanet_users.table[index] = NULL;
+            }
+            return;
+        }
+        last = rec;
+        rec = rec->next;
+    }
+}
+
+/* Unravelled version of hashpjw */
+uint16_t uid_hash(char *uid)
+{
+    uint32_t h = 0, g;
+    
+    h = (h << 4) + uid[0];
+    if((g = h & 0xf0000000)) {
+        h ^= (g >> 24);
+        h ^= g;
+    }
+    h = (h << 4) + uid[1];
+    if((g = h & 0xf0000000)) {
+        h ^= (g >> 24);
+        h ^= g;
+    }
+    h = (h << 4) + uid[2];
+    if((g = h & 0xf0000000)) {
+        h ^= (g >> 24);
+        h ^= g;
+    }
+    return h % UID_TABLE_SIZE;
+}
+
