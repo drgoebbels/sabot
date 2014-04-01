@@ -542,19 +542,18 @@ aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
             Rcon[i].b[0] = xtime(Rcon[i-1].b[0]);
 #endif
     
-    
     KeyExpansion((uint8_t *)key, keysched);
     
     enc = alloc(sizeof(*enc)+INIT_AES_BUF_SIZE);
     enc->size = 0;
     
-    while(len > AES_BLOCK_BYTELEN) {
+    while(len >= AES_BLOCK_BYTELEN) {
         digest = newblock(&enc, &bufsize);
-        aes_block_encrypt(digest, keysched);
         for(i = 0; i < 4; i++) {
             for(j = 0; j < 4; j++)
                 digest->b[j][i] = ((uint8_t *)message)[4*i + j];
         }
+        aes_block_encrypt(digest, keysched);
         len -= AES_BLOCK_BYTELEN;
         message += AES_BLOCK_BYTELEN;
     }
@@ -574,18 +573,18 @@ pkcs5:
     diff = AES_BLOCK_BYTELEN - (i*4 + j);
     for(; i < 4; i++) {
         for(; j < 4; j++) {
-            if(i*4 + j < len)
+            if(i*4 + j < AES_BLOCK_BYTELEN)
                 digest->b[j][i] = diff;
             else
                 goto pkcs5_encrypt;
         }
         j = 0;
     }
-    
+
 pkcs5_encrypt:
+    
     aes_block_encrypt(digest, keysched);
     enc = ralloc(enc, sizeof(*enc)+enc->size);
-    
     return enc;
 }
 
@@ -594,7 +593,6 @@ void aes_block_encrypt(aesblock_s *in, word_u *w)
     unsigned round;
     
     print_block(in);
-    
     AddRoundKey(in, w);
     for(round = 1; round < Nr; round++) {
         SubBytes(in);
@@ -905,6 +903,6 @@ void print_aesdigest(aes_digest_s *digest)
 {
     int i;
 
-    for(i = 0; i < digest->size; i += AES_BLOCK_BYTELEN)
+    for(i = 0; i < digest->size/AES_BLOCK_BYTELEN; i++)
         print_block(&digest->data[i]);
 }

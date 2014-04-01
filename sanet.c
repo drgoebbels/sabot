@@ -309,7 +309,7 @@ inline char *nexttoken(connect_inst_s *conn)
         case 'M':
             message = alloc(sizeof(*message));
             
-            /* get id of messager */
+            /* get id of sender */
             *lex++ = netgetchar(conn);
             *lex++ = netgetchar(conn);
             *lex++ = netgetchar(conn);
