@@ -57,6 +57,7 @@ extern salt_s get_salt(void);
 #define AES_256 256
 
 #define AES_BLOCK_LENGTH 128
+#define AES_BLOCK_BYTELEN (AES_BLOCK_LENGTH/8)
 
 #define KEY_LENGTH AES_128
 #define Nb (AES_BLOCK_LENGTH/32)
@@ -76,7 +77,6 @@ extern salt_s get_salt(void);
     
 typedef union aesblock_s aesblock_s;
     
-typedef struct aesblock_node_s aesblock_node_s;
 typedef struct aes_digest_s aes_digest_s;
 
 /* 
@@ -95,24 +95,17 @@ union aesblock_s
     uint64_t q[2];
 };
     
-struct aesblock_node_s
-{
-    aesblock_s block;
-    aesblock_node_s *prev;
-    aesblock_node_s *next;
-};
-    
 struct aes_digest_s
 {
-    aesblock_node_s *head;
-    aesblock_node_s *tail;
+    size_t size;
+    aesblock_s data[];
 };
 
-extern aes_digest_s aes_encrypt(void *message, size_t len, char *key);
+extern aes_digest_s *aes_encrypt(void *message, size_t len, char *key);
 extern aes_digest_s *aes_decrypt(void *message, size_t len, char *key);
 
 extern void print_block(aesblock_s *b);
-extern void print_aesdigest(aes_digest_s digest);
+extern void print_aesdigest(aes_digest_s *digest);
     
 #ifdef __cplusplus
 }

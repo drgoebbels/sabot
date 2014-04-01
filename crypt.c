@@ -317,6 +317,9 @@ salt_s get_salt(void)
 }
 
 /*AES Implementation */
+
+#define INIT_AES_BUF_SIZE (2*AES_BLOCK_BYTELEN)
+
 typedef union word_u word_u;
 
 union word_u
@@ -514,8 +517,8 @@ static inline void ShiftRows(aesblock_s *state);
 static inline void MixColumns(aesblock_s *state);
 static inline void AddRoundKey(aesblock_s *state, word_u *w);
 static inline void KeyExpansion(uint8_t *key, word_u *w);
-static void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w);
-static aesblock_s *newblock(aes_digest_s *d);
+static void aes_block_encrypt(aesblock_s *in, word_u *w);
+static aesblock_s *newblock(aes_digest_s **d, size_t *bufsize);
 
 
 static void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w);
@@ -524,14 +527,14 @@ static inline void InvShiftRows(aesblock_s *state);
 static inline void InvSubBytes(aesblock_s *state);
 static inline void InvMixColumns(aesblock_s *state);
 
-aes_digest_s aes_encrypt(void *message, size_t len, char *key)
+aes_digest_s *aes_encrypt(void *message, size_t len, char *key)
 {
     uint8_t diff;
     size_t i, j;
-    aes_digest_s enc;
-    aesblock_s state;
+    aes_digest_s *enc;
     aesblock_s *digest;
     word_u keysched[Nb*(Nr+1)];
+    size_t bufsize = INIT_AES_BUF_SIZE;
     
 #ifndef STATIC_RCON
     if(!Rcon[0].b[0]) /* At least cache it */
@@ -539,37 +542,40 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
             Rcon[i].b[0] = xtime(Rcon[i-1].b[0]);
 #endif
     
+    
     KeyExpansion((uint8_t *)key, keysched);
     
-    enc.head = NULL;
+    enc = alloc(sizeof(*enc)+INIT_AES_BUF_SIZE);
+    enc->size = 0;
     
-#if(AES_MODE & AES_MODE_ECB) /* Do PKCS5 Padding */
-    while(len > AES_BLOCK_LENGTH) {
+    while(len > AES_BLOCK_BYTELEN) {
+        digest = newblock(&enc, &bufsize);
+        aes_block_encrypt(digest, keysched);
         for(i = 0; i < 4; i++) {
             for(j = 0; j < 4; j++)
-                state.b[j][i] = ((uint8_t *)message)[4*i + j];
+                digest->b[j][i] = ((uint8_t *)message)[4*i + j];
         }
-        digest = newblock(&enc);
-        aes_block_encrypt(&state, digest, keysched);
-        len -= AES_BLOCK_LENGTH;
-        message += AES_BLOCK_LENGTH;
+        len -= AES_BLOCK_BYTELEN;
+        message += AES_BLOCK_BYTELEN;
     }
     
+    digest = newblock(&enc, &bufsize);
+    /* Apply PKCS5 padding */
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 4; j++) {
             if(i*4 + j < len)
-                state.b[j][i] = ((uint8_t *)message)[4*i + j];
+                digest->b[j][i] = ((uint8_t *)message)[4*i + j];
             else
                 goto pkcs5;
         }
     }
     
 pkcs5:
-    diff = AES_BLOCK_LENGTH - (i*4 + j);
+    diff = AES_BLOCK_BYTELEN - (i*4 + j);
     for(; i < 4; i++) {
         for(; j < 4; j++) {
             if(i*4 + j < len)
-                state.b[j][i] = diff;
+                digest->b[j][i] = diff;
             else
                 goto pkcs5_encrypt;
         }
@@ -577,29 +583,17 @@ pkcs5:
     }
     
 pkcs5_encrypt:
-    digest = newblock(&enc);
-    aes_block_encrypt(&state, digest, keysched);
-#else
-    /* This will have major problems if plaintext not alligned by x128 */
-    while(len > 0) {
-        for(i = 0; i < 4; i++) {
-            for(j = 0; j < 4; j++)
-                state.b[j][i] = ((uint8_t *)message)[4*i + j];
-        }
-        digest = newblock(&enc);
-        aes_block_encrypt(&state, digest, keysched);
-        len -= AES_BLOCK_LENGTH;
-        message += AES_BLOCK_LENGTH;
-    }
-#endif
+    aes_block_encrypt(digest, keysched);
+    enc = ralloc(enc, sizeof(*enc)+enc->size);
     
     return enc;
 }
 
-void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
+void aes_block_encrypt(aesblock_s *in, word_u *w)
 {
     unsigned round;
     
+    print_block(in);
     
     AddRoundKey(in, w);
     for(round = 1; round < Nr; round++) {
@@ -611,9 +605,6 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     SubBytes(in);
     ShiftRows(in);
     AddRoundKey(in, &w[Nr*Nb]);
-    
-    out->q[0] = in->q[0];
-    out->q[1] = in->q[1];
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -770,6 +761,14 @@ aes_digest_s *aes_decrypt(void *message, size_t len, char *key)
     word_u keysched[Nb*(Nr+1)];
     
     KeyExpansion((uint8_t *)key, keysched);
+    
+    while(len > 0) {
+        
+        message += AES_BLOCK_BYTELEN;
+        len -= AES_BLOCK_BYTELEN;
+    }
+    
+    
     digest = alloc(sizeof(*digest));
     
     aes_block_decrypt(message, digest, keysched);
@@ -789,7 +788,6 @@ void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     }
     
     AddRoundKey(state, &w[Nr*Nb]);
-    print_block((aesblock_s *)state);
     for(round = Nr-1; round >= 1; round--) {
         InvShiftRows(state);
         InvSubBytes(state);
@@ -879,23 +877,14 @@ inline void InvMixColumns(aesblock_s *state)
     }
 }
 
-static aesblock_s *newblock(aes_digest_s *d)
+aesblock_s *newblock(aes_digest_s **d, size_t *bufsize)
 {
-    aesblock_node_s *n;
-    
-    n = alloc(sizeof(*n));
-    n->next = NULL;
-    if(d->head) {
-        d->tail->next = n;
-        n->prev = d->tail;
-        d->tail = n;
+    (*d)->size += AES_BLOCK_BYTELEN;
+    if((*d)->size == *bufsize) {
+        *bufsize *= 2;
+        *d = ralloc(*d, sizeof(**d) + *bufsize);
     }
-    else {
-        n->prev = NULL;
-        d->head = n;
-        d->tail = n;
-    }
-    return &n->block;
+    return &(*d)->data[(*d)->size/AES_BLOCK_BYTELEN - 1];
 }
 
 void print_block(aesblock_s *bl)
@@ -912,10 +901,10 @@ void print_block(aesblock_s *bl)
     
 }
 
-void print_aesdigest(aes_digest_s digest)
+void print_aesdigest(aes_digest_s *digest)
 {
-    aesblock_node_s *n;
-    
-    for(n = digest.head; n; n = n->next)
-        print_block(&n->block);
+    int i;
+
+    for(i = 0; i < digest->size; i += AES_BLOCK_BYTELEN)
+        print_block(&digest->data[i]);
 }
