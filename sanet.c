@@ -505,23 +505,23 @@ connect_inst_s *get_connectinst(char *uname)
 void adduser(user_s *u)
 {
     uint16_t index = uid_hash(u->id);
-    uint16_t k = *(uint16_t *)u->id, tmp; /* ,,|,, strict aliasing */
+    uint32_t k = *(uint32_t *)u->id, tmp; /* ,,|,, strict aliasing */
     uid_record_s *rec = sanet_users.table[index], *n;
     
     n = alloc(sizeof(*n));
     n->user = u;
     n->next = NULL;
     if(rec) {
-        tmp = *(uint16_t *)rec->user->id;
+        tmp = *(uint32_t *)rec->user->id;
         if(k == tmp)
             return;
         while(rec->next) {
-            tmp = *(uint16_t *)rec->user->id;
+            tmp = *(uint32_t *)rec->user->id;
             if(k == tmp)
                 return;
             rec = rec->next;
         }
-        tmp = *(uint16_t *)rec->user->id;
+        tmp = *(uint32_t *)rec->user->id;
         if(k == tmp)
             return;
         rec->next = n;
@@ -534,11 +534,11 @@ void adduser(user_s *u)
 
 user_s *userlookup(char *uid)
 {
-    uint16_t k = *(uint16_t *)uid, tmp;
+    uint32_t k = *(uint32_t *)uid, tmp;
     uid_record_s *rec = sanet_users.table[uid_hash(uid)];
     
     while(rec) {
-        tmp = *(uint16_t *)rec->user->id;
+        tmp = *(uint32_t *)rec->user->id;
         if(k == tmp)
             return rec->user;
         rec = rec->next;
@@ -549,11 +549,11 @@ user_s *userlookup(char *uid)
 void deleteuser(char *uid)
 {
     uint16_t index = uid_hash(uid);
-    uint16_t k = *(uint16_t *)uid, tmp;
+    uint32_t k = *(uint32_t *)uid, tmp;
     uid_record_s *rec = sanet_users.table[index], *last = NULL;
     
     while(rec) {
-        tmp = *(uint16_t *)rec->user->id;
+        tmp = *(uint32_t *)rec->user->id;
         if(k == tmp) {
             if(last) {
                 last->next = rec->next;
