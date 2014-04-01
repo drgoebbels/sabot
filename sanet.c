@@ -80,8 +80,7 @@ int socket_(const char *server)
         perror("cannot create socket");
         exit(EXIT_FAILURE);
     }
-    printf("socket number: %d", sock);
-    
+
     memset(&sockin, 0, sizeof(sockin));
     
     sockin.sin_family = AF_INET;
@@ -335,7 +334,6 @@ inline char *nexttoken(connect_inst_s *conn)
             message->is_consumed = false;
             message->next = NULL;
             
-            pthread_mutex_lock(&chptr->lock);
             if(chptr->head) {
                 message->prev = chptr->tail;
                 chptr->tail->next = message;
@@ -346,8 +344,7 @@ inline char *nexttoken(connect_inst_s *conn)
                 chptr->head = message;
                 chptr->tail = message;
             }
-            pthread_mutex_unlock(&chptr->lock);
-            
+
             pthread_cond_signal(&monitor.cond);
             pthread_mutex_unlock(&monitor.lock);
             break;
@@ -473,6 +470,7 @@ inline bool is_gamenamechar(int c)
 
 inline void msg_lock(connect_inst_s *conn)
 {
+    printf("locking: %p\n", conn);
     pthread_mutex_lock(&conn->chat.lock);
 }
 

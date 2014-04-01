@@ -18,7 +18,7 @@ int main(int arc, char *argv[])
     uint32_t i, j;
     clock_t time;
     
-    aes_encrypt(clear, sizeof(clear)-1, key);
+    print_aesdigest(aes_encrypt(clear, sizeof(clear)-1, key));
     
     return 0;
     
@@ -31,7 +31,7 @@ int main(int arc, char *argv[])
     
     sha512(argv[1], strlen(argv[1]), &digest);
 
-    print_digest(&digest);
+    print_sha512digest(&digest);
     //store_account();
     //authenticate();
     /*for(i = 0; i < N_TESTS; i++) {

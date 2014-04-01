@@ -119,9 +119,9 @@ void authenticate(void)
     
     sha512(pass, len + sizeof(salt), &attempt);
     puts("attempted:");
-    print_digest(&attempt);
+    print_sha512digest(&attempt);
     puts("read in:");
-    print_digest(&hashed);
+    print_sha512digest(&hashed);
     putchar('\n');
     if(sha512_equal(&hashed, &attempt)) {
         puts("Authentication Passed!");

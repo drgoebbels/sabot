@@ -257,7 +257,7 @@ void print_word(uint64_t w)
     putchar('\n');
 }
 
-void print_digest(sha512_s *digest)
+void print_sha512digest(sha512_s *digest)
 {
     unsigned i;
     uint64_t *p = (uint64_t *)digest->word;
@@ -526,6 +526,7 @@ static inline void InvMixColumns(aesblock_s *state);
 
 aes_digest_s aes_encrypt(void *message, size_t len, char *key)
 {
+    uint8_t diff;
     size_t i, j;
     aes_digest_s enc;
     aesblock_s state;
@@ -541,65 +542,64 @@ aes_digest_s aes_encrypt(void *message, size_t len, char *key)
     KeyExpansion((uint8_t *)key, keysched);
     
     enc.head = NULL;
-    for(i = 0; i + AES_BLOCK_LENGTH <= len; i += AES_BLOCK_LENGTH) {
-        digest = newblock(&enc);
+    
+#if(AES_MODE & AES_MODE_ECB) /* Do PKCS5 Padding */
+    while(len > AES_BLOCK_LENGTH) {
         for(i = 0; i < 4; i++) {
             for(j = 0; j < 4; j++)
                 state.b[j][i] = ((uint8_t *)message)[4*i + j];
         }
+        digest = newblock(&enc);
         aes_block_encrypt(&state, digest, keysched);
+        len -= AES_BLOCK_LENGTH;
+        message += AES_BLOCK_LENGTH;
     }
     
-#if (AES_MODE & AES_MODE_ECB) /* Do PKCS5 Padding */
-    size_t offset, tmp;
-
-    digest = alloc(sizeof(*digest));
-    if(i)
-        i -= AES_BLOCK_LENGTH;
-    offset = i;
     for(i = 0; i < 4; i++) {
         for(j = 0; j < 4; j++) {
-            tmp = offset + 4*i +j;
-            if(tmp < len)
-                state.b[j][i] = ((uint8_t *)message)[tmp];
-            else {
-                tmp = AES_BLOCK_LENGTH - tmp;
-                if(!tmp){
-                    aes_block_encrypt(&state, digest, keysched);
-                    digest = newblock(&enc);
-                    for(i = 0;  i < 4; i++) {
-                        for (j = 0; j < 4; j++)
-                            state.b[i][j] = AES_BLOCK_LENGTH;
-                    }
-                }
-                else {
-                    while(i < 4) {
-                        while(j < 4) {
-                            state.b[j][i] = tmp;
-                            j++;
-                        }
-                        j = 0;
-                        i++;
-                    }
-                }
-                goto ecb_done;
-            }
+            if(i*4 + j < len)
+                state.b[j][i] = ((uint8_t *)message)[4*i + j];
+            else
+                goto pkcs5;
         }
     }
-ecb_done:
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 4; j++) {
-            printf("%u, ", state.b[j][i]);
+    
+pkcs5:
+    diff = AES_BLOCK_LENGTH - (i*4 + j);
+    for(; i < 4; i++) {
+        for(; j < 4; j++) {
+            if(i*4 + j < len)
+                state.b[j][i] = diff;
+            else
+                goto pkcs5_encrypt;
         }
+        j = 0;
+    }
+    
+pkcs5_encrypt:
+    digest = newblock(&enc);
+    aes_block_encrypt(&state, digest, keysched);
+#else
+    /* This will have major problems if plaintext not alligned by x128 */
+    while(len > 0) {
+        for(i = 0; i < 4; i++) {
+            for(j = 0; j < 4; j++)
+                state.b[j][i] = ((uint8_t *)message)[4*i + j];
+        }
+        digest = newblock(&enc);
+        aes_block_encrypt(&state, digest, keysched);
+        len -= AES_BLOCK_LENGTH;
+        message += AES_BLOCK_LENGTH;
     }
 #endif
-
+    
     return enc;
 }
 
 void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
 {
     unsigned round;
+    
     
     AddRoundKey(in, w);
     for(round = 1; round < Nr; round++) {
@@ -611,6 +611,9 @@ void aes_block_encrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     SubBytes(in);
     ShiftRows(in);
     AddRoundKey(in, &w[Nr*Nb]);
+    
+    out->q[0] = in->q[0];
+    out->q[1] = in->q[1];
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -761,20 +764,6 @@ inline void KeyExpansion(uint8_t *key, word_u *w)
     }
 }
 
-void print_block(aesblock_s *bl)
-{
-    unsigned i, j;
-    
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 4; j++) {
-            printf("0x%02x, ", bl->b[i][j]);
-        }
-        putchar('\n');
-    }
-    putchar('\n');
-
-}
-
 aes_digest_s *aes_decrypt(void *message, size_t len, char *key)
 {
     aesblock_s *digest;
@@ -907,4 +896,26 @@ static aesblock_s *newblock(aes_digest_s *d)
         d->tail = n;
     }
     return &n->block;
+}
+
+void print_block(aesblock_s *bl)
+{
+    unsigned i, j;
+    
+    for(i = 0; i < 4; i++) {
+        for(j = 0; j < Nb; j++) {
+            printf("0x%02x, ", bl->b[i][j]);
+        }
+        putchar('\n');
+    }
+    putchar('\n');
+    
+}
+
+void print_aesdigest(aes_digest_s digest)
+{
+    aesblock_node_s *n;
+    
+    for(n = digest.head; n; n = n->next)
+        print_block(&n->block);
 }

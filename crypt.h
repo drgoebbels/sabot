@@ -33,7 +33,7 @@ extern void sha512(void *message, size_t len, sha512_s *digest);
 
 extern int sha512_equal(sha512_s *d1, sha512_s *d2);
 
-extern void print_digest(sha512_s *digest);
+extern void print_sha512digest(sha512_s *digest);
 
 extern void PBKDF(char *pass, salt_s salt, unsigned C, size_t kLen);
 
@@ -79,7 +79,6 @@ typedef union aesblock_s aesblock_s;
 typedef struct aesblock_node_s aesblock_node_s;
 typedef struct aes_digest_s aes_digest_s;
 
-    
 /* 
  Naming of union members correspond with naming conventions for 
  addressable intel units. 
@@ -113,7 +112,7 @@ extern aes_digest_s aes_encrypt(void *message, size_t len, char *key);
 extern aes_digest_s *aes_decrypt(void *message, size_t len, char *key);
 
 extern void print_block(aesblock_s *b);
-
+extern void print_aesdigest(aes_digest_s digest);
     
 #ifdef __cplusplus
 }
