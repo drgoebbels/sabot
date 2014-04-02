@@ -30,9 +30,9 @@
    <widget class="QPushButton" name="addLogin">
     <property name="geometry">
      <rect>
-      <x>730</x>
+      <x>770</x>
       <y>10</y>
-      <width>141</width>
+      <width>101</width>
       <height>32</height>
      </rect>
     </property>
@@ -45,7 +45,7 @@
      <rect>
       <x>10</x>
       <y>0</y>
-      <width>721</width>
+      <width>761</width>
       <height>421</height>
      </rect>
     </property>
@@ -65,33 +65,32 @@
      <attribute name="title">
       <string>&lt;inactive&gt;</string>
      </attribute>
-     <widget class="QListView" name="usersList">
-      <property name="geometry">
-       <rect>
-        <x>560</x>
-        <y>10</y>
-        <width>151</width>
-        <height>241</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QListView" name="myBotList">
-      <property name="geometry">
-       <rect>
-        <x>560</x>
-        <y>260</y>
-        <width>151</width>
-        <height>121</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QListView" name="listView">
+     <widget class="QListWidget" name="chatList">
       <property name="geometry">
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>541</width>
+        <width>531</width>
         <height>371</height>
+       </rect>
+      </property>
+      <property name="verticalScrollMode">
+       <enum>QAbstractItemView::ScrollPerItem</enum>
+      </property>
+      <property name="layoutMode">
+       <enum>QListView::SinglePass</enum>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="userList">
+      <property name="geometry">
+       <rect>
+        <x>555</x>
+        <y>11</y>
+        <width>191</width>
+        <height>241</height>
        </rect>
       </property>
      </widget>

@@ -14,9 +14,11 @@ char clear[] = "\x32\x43\xf6\xa8\x88\x5a\x30\x8d\x31\x31\x98\xa2\xe0\x37\x07\x34
 
 int main(int arc, char *argv[])
 {
+    aes_digest_s *tmp;
     
-    print_aesdigest(aes_encrypt(clear, sizeof(clear)-1, key));
-    
+    print_aesdigest(tmp = aes_encrypt(clear, sizeof(clear)-1, key));
+    puts("\n");
+    print_aesdigest(aes_decrypt(tmp->data, tmp->size, key));
     
     
     return 0;

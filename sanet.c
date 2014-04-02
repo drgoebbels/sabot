@@ -137,13 +137,18 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->sock = sock;
     conn->chat.head = NULL;
     conn->chat.tail = NULL;
+    conn->next = NULL;
     pthread_mutex_init(&conn->chat.lock, NULL);
 
     conn->i = 0;
     conn->len = 0;
     conn->uget = false;
-    
+    conn->uqueue.head = NULL;
+
+    pthread_mutex_lock(&monitor.lock);
     add_connection(conn);
+    pthread_mutex_unlock(&monitor.lock);
+
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
     pthread_create(&conn->thread, NULL, (void *(*)(void *))ack_thread, conn);
@@ -161,9 +166,9 @@ void connect_thread(connect_inst_s *con)
     while(1) {
         nexttoken(con);
         if(monitor.inuse) {
-            pthread_mutex_lock(&monitor.lock);
-            pthread_cond_signal(&monitor.cond);
-            pthread_mutex_unlock(&monitor.lock);
+           // pthread_mutex_lock(&monitor.lock);
+          //  pthread_cond_signal(&monitor.cond);
+           // pthread_mutex_unlock(&monitor.lock);
         }
         count++;
     }
@@ -304,7 +309,14 @@ inline char *nexttoken(connect_inst_s *conn)
             break;
         case 'U':
             u = parse_uname(conn);
+            pthread_mutex_lock(&conn->chat.lock);
             adduser(u);
+            uenque(conn, u, true);
+            pthread_mutex_unlock(&conn->chat.lock);
+
+            pthread_mutex_lock(&monitor.lock);
+            pthread_cond_signal(&monitor.cond);
+            pthread_mutex_unlock(&monitor.lock);
             break;
         case 'M':
             message = alloc(sizeof(*message));
@@ -323,17 +335,17 @@ inline char *nexttoken(connect_inst_s *conn)
             else
                 message->user = blank;
             /* get type of message */
-            c = netgetchar(conn);
+            message->type = netgetchar(conn);
             
             /* get message content */
             lex = message->text;
             while((*lex++ = netgetchar(conn)));
 
-            pthread_mutex_lock(&monitor.lock);
             chptr = &conn->chat;
             message->is_consumed = false;
             message->next = NULL;
-            
+
+            pthread_mutex_lock(&chptr->lock);
             if(chptr->head) {
                 message->prev = chptr->tail;
                 chptr->tail->next = message;
@@ -344,7 +356,10 @@ inline char *nexttoken(connect_inst_s *conn)
                 chptr->head = message;
                 chptr->tail = message;
             }
+           pthread_mutex_unlock(&chptr->lock);
 
+
+            pthread_mutex_lock(&monitor.lock);
             pthread_cond_signal(&monitor.cond);
             pthread_mutex_unlock(&monitor.lock);
             break;
@@ -356,9 +371,15 @@ inline char *nexttoken(connect_inst_s *conn)
             
             u = userlookup(t->lexeme);
             if(u) {
-                name = u->name;
-                printf("%s disconnected from lobby\n", name);
+                pthread_mutex_lock(&conn->chat.lock);
+                uenque(conn, u, false);
+                pthread_mutex_unlock(&conn->chat.lock);
+
+                pthread_mutex_lock(&monitor.lock);
+                pthread_cond_signal(&monitor.cond);
+                pthread_mutex_unlock(&monitor.lock);
                 deleteuser(t->lexeme);
+
             }
             break;
         default:
@@ -470,13 +491,34 @@ inline bool is_gamenamechar(int c)
 
 inline void msg_lock(connect_inst_s *conn)
 {
-    printf("locking: %p\n", conn);
     pthread_mutex_lock(&conn->chat.lock);
 }
 
 inline void msg_unlock(connect_inst_s *conn)
 {
     pthread_mutex_unlock(&conn->chat.lock);
+}
+
+void uenque(connect_inst_s *conn, user_s *u, bool add)
+{
+    user_event_queue_s *n = alloc(sizeof(*n));
+    
+    n->add = add;
+    n->uptr = u;
+    n->next = NULL;
+    if(conn->uqueue.head)
+        conn->uqueue.tail->next = n;
+    else
+        conn->uqueue.head = n;
+    conn->uqueue.tail = n;
+}
+
+user_event_queue_s *udequeue(connect_inst_s *conn)
+{
+    user_event_queue_s *next = conn->uqueue.head;
+    if(next)
+        conn->uqueue.head = conn->uqueue.head->next;
+    return next;
 }
 
 void send_message(char *message, int sock)

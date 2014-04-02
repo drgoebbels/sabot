@@ -2,10 +2,12 @@
 #include "ui_mainwindow.h"
 
 #include <QListWidget>
+#include <QListWidgetItem>
 
 /*
  * Not Where I wanted to place this, but so far this is
  * a way to avoid C & C++ compiler conflicts.
+ *
  */
 uint16_t active;
 const char *sanet_servers[][2] = {
@@ -32,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(postMessage()));
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
     connect(monitor, SIGNAL(messageReceived(connect_inst_s *)), this, SLOT(postRemoteMessage(connect_inst_s *)));
+    connect(monitor, SIGNAL(updateUserList(user_s *, bool)), this, SLOT(addUser(user_s *, bool)));
+
     monitor->start();
 }
 
@@ -46,14 +50,22 @@ void MainWindow::postMessage()
 
 void MainWindow::postRemoteMessage(connect_inst_s *conn)
 {
-    QWidget *list = this->ui->serverTabs->currentWidget();
+    chat_packet_s *msg = conn->chat.tail;
+    user_s *sender = msg->user;
+    QWidget* tab = ui->serverTabs->currentWidget();
+    QListWidget *chatList = tab->findChild<QListWidget *>("chatList");
+    std::string message;
 
-    if(list) {
-        puts(list->whatsThis().toStdString().c_str());
-        fflush(stdout);
+    if(msg->type == 'P') {
+        message.append(" [private] ");
     }
-
-    ///list->addItem(conn->chat.tail->text);
+    message.append("<");
+    message.append(sender->name);
+    message.append(":");
+    message.append(sender->id);
+    message.append("> ");
+    message.append(msg->text);
+    chatList->addItem(message.c_str());
 }
 
 void MainWindow::loginAccept()
@@ -79,6 +91,31 @@ void MainWindow::loginAccept()
     active |= (1 << index);
 }
 
+void MainWindow::addUser(user_s *u, bool add)
+{
+    QWidget* tab = ui->serverTabs->currentWidget();
+    QListWidget *userList = tab->findChild<QListWidget *>("userList");
+    std::string user(" ");
+    user.append(u->id);
+    user.append(" -> ");
+    user.append(u->name);
+    if(u->mod_level > '0')
+        user.append(": M");
+
+
+    if(add) {
+        userList->addItem(user.c_str());
+    }
+    else {
+        printf("%s disconnected\n", u->name);
+
+        QList<QListWidgetItem *> childList = userList->findItems(user.c_str(), Qt::MatchExactly);
+        if(childList.size() > 0)
+            delete childList.first();
+    }
+
+}
+
 void MainWindow::loginButtonClicked()
 {
     if(!lp) {
@@ -99,6 +136,7 @@ void MonitorThread::run()
 {
     int i = 0;
     monitor.inuse = 1;
+    user_event_queue_s *node;
     connect_inst_s *conn, *backup;
 
     forever {
@@ -108,24 +146,24 @@ void MonitorThread::run()
         conn = connlist;
         while(conn) {
             msg_lock(conn);
-            printf("%p, %p\n", conn, connlist);
-            fflush(stdout);
-            printf("%p\n", conn->chat.tail);
-            fflush(stdout);
             if(conn->chat.tail && !conn->chat.tail->is_consumed) {
-                conn->chat.tail->is_consumed = true;
                 emit messageReceived(conn);
+                conn->chat.tail->is_consumed = true;
+            }
+            if(conn->uqueue.head) {
+                while((node = udequeue(conn))) {
+                    emit updateUserList(node->uptr, node->add);
+                    free(node);
+                }
+                conn->uqueue.head = NULL;
             }
             backup = conn;
             conn = conn->next;
             msg_unlock(backup);
         }
-
-
         release_message();
     }
 }
-
 
 MainWindow::~MainWindow()
 {

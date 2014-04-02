@@ -517,11 +517,11 @@ static inline void ShiftRows(aesblock_s *state);
 static inline void MixColumns(aesblock_s *state);
 static inline void AddRoundKey(aesblock_s *state, word_u *w);
 static inline void KeyExpansion(uint8_t *key, word_u *w);
-static void aes_block_encrypt(aesblock_s *in, word_u *w);
+static void aes_block_encrypt(aesblock_s *state, word_u *w);
 static aesblock_s *newblock(aes_digest_s **d, size_t *bufsize);
 
 
-static void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w);
+static void aes_block_decrypt(aesblock_s *state, word_u *w);
 static inline uint8_t InvSubByte(uint8_t b);
 static inline void InvShiftRows(aesblock_s *state);
 static inline void InvSubBytes(aesblock_s *state);
@@ -582,27 +582,25 @@ pkcs5:
     }
 
 pkcs5_encrypt:
-    
     aes_block_encrypt(digest, keysched);
     enc = ralloc(enc, sizeof(*enc)+enc->size);
     return enc;
 }
 
-void aes_block_encrypt(aesblock_s *in, word_u *w)
+void aes_block_encrypt(aesblock_s *state, word_u *w)
 {
     unsigned round;
     
-    print_block(in);
-    AddRoundKey(in, w);
+    AddRoundKey(state, w);
     for(round = 1; round < Nr; round++) {
-        SubBytes(in);
-        ShiftRows(in);
-        MixColumns(in);
-        AddRoundKey(in, &w[round*Nb]);
+        SubBytes(state);
+        ShiftRows(state);
+        MixColumns(state);
+        AddRoundKey(state, &w[round*Nb]);
     }
-    SubBytes(in);
-    ShiftRows(in);
-    AddRoundKey(in, &w[Nr*Nb]);
+    SubBytes(state);
+    ShiftRows(state);
+    AddRoundKey(state, &w[Nr*Nb]);
 }
 
 inline uint8_t xtime(uint8_t b)
@@ -755,35 +753,33 @@ inline void KeyExpansion(uint8_t *key, word_u *w)
 
 aes_digest_s *aes_decrypt(void *message, size_t len, char *key)
 {
+    size_t i, j;
+    size_t buffsize = INIT_AES_BUF_SIZE;
     aesblock_s *digest;
+    aes_digest_s *enc;
     word_u keysched[Nb*(Nr+1)];
     
     KeyExpansion((uint8_t *)key, keysched);
     
-    while(len > 0) {
-        
+    enc = alloc(sizeof(*enc)+INIT_AES_BUF_SIZE);
+    enc->size = 0;
+    while(len >= AES_BLOCK_BYTELEN) {
+        digest = newblock(&enc, &buffsize);
+        for(i = 0; i < 4; i++) {
+            for(j = 0; j < 4; j++)
+                digest->b[i][j] = ((uint8_t *)message)[4*i + j];
+        }
+        aes_block_decrypt(digest, keysched);
         message += AES_BLOCK_BYTELEN;
         len -= AES_BLOCK_BYTELEN;
     }
     
-    
-    digest = alloc(sizeof(*digest));
-    
-    aes_block_decrypt(message, digest, keysched);
-    return (aes_digest_s *)digest;
+    return enc;
 }
 
-void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
+void aes_block_decrypt(aesblock_s *state, word_u *w)
 {
-    unsigned i, j;
     unsigned round;
-    aesblock_s *state;
-    
-    state = (aesblock_s *)out;
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 4; j++)
-            state->b[i][j] = in->b[i][j];
-    }
     
     AddRoundKey(state, &w[Nr*Nb]);
     for(round = Nr-1; round >= 1; round--) {
@@ -795,12 +791,7 @@ void aes_block_decrypt(aesblock_s *in, aesblock_s *out, word_u *w)
     InvShiftRows(state);
     InvSubBytes(state);
     AddRoundKey(state, w);
-    print_block((aesblock_s *)state);
-    
-    for(i = 0; i < 4; i++) {
-        for(j = 0; j < 4; j++)
-            state->b[i][j] = in->b[i][j];
-    }
+
 }
 
 inline uint8_t InvSubByte(uint8_t b)

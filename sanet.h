@@ -31,6 +31,7 @@ extern "C" {
 
 typedef struct chatbox_s chatbox_s;
 typedef struct token_s token_s;
+typedef struct user_event_queue_s user_event_queue_s;
 typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
 typedef struct monitor_s monitor_s;
@@ -39,6 +40,8 @@ typedef struct user_s user_s;
 typedef struct uid_record_s uid_record_s;
 typedef struct uid_hash_s uid_hash_s;
 
+/*event types*/
+typedef struct edit_users_s edit_users_s;
 
 struct chatbox_s
 {
@@ -54,6 +57,12 @@ struct token_s
     token_s *next;
 };
     
+struct user_event_queue_s {
+    user_event_queue_s *next;
+    bool add;
+    user_s *uptr;
+};
+    
 struct connect_inst_s
 {
     int c;
@@ -67,6 +76,11 @@ struct connect_inst_s
     size_t i;
     char buf[BUF_SIZE];
     token_s tok;
+    struct {
+        user_event_queue_s *head;
+        user_event_queue_s *tail;
+    }
+    uqueue;
     connect_inst_s *next;
 };
 
@@ -74,6 +88,7 @@ struct chat_packet_s
 {
     bool is_consumed;
     user_s *user;
+    char type;
     char text[148];
     chat_packet_s *next;
     chat_packet_s *prev;
@@ -126,7 +141,10 @@ extern void release_message(void);
 extern connect_inst_s *get_connectinst(char *uname);
 extern inline void msg_lock(connect_inst_s *conn);
 extern inline void msg_unlock(connect_inst_s *conn);
-    
+
+extern void uenque(connect_inst_s *conn, user_s *u, bool add);
+extern user_event_queue_s *udequeue(connect_inst_s *conn);
+
 extern void adduser(user_s *u);
 extern user_s *userlookup(char *uid);
 extern void deleteuser(char *uid);
