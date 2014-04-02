@@ -3,7 +3,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <sys/time.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -18,6 +17,8 @@
 uid_hash_s sanet_users;
 
 connect_inst_s *connlist;
+connect_inst_s *conncurr;
+
 monitor_s monitor = {
     .inuse = 0,
     .cond = PTHREAD_COND_INITIALIZER,
@@ -149,6 +150,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     add_connection(conn);
     pthread_mutex_unlock(&monitor.lock);
 
+    conncurr = conn;
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
     pthread_create(&conn->thread, NULL, (void *(*)(void *))ack_thread, conn);
@@ -225,20 +227,12 @@ inline int netgetchar(connect_inst_s *s)
 {
     if(s->uget) {
         s->uget = false;
-        putchar(s->c);
-        fflush(stdout);
-
         return s->c;
     }
     if(s->i == s->len) {
         s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
         s->i = 0;
     }
-    //printf("%c~%u   ", s->buf[s->i], s->buf[s->i]);
-    //putchar(s->buf[s->i]);
-    //fflush(stdout);
-
-    //putchar(s->buf[s->i]);
     return s->buf[s->i++];
 }
 
@@ -265,11 +259,17 @@ inline char *nexttoken(connect_inst_s *conn)
     int c, i = 0;
     token_s *t = &conn->tok;
     char *name = "not found";
-    chat_packet_s *message;
     chatbox_s *chptr;
     char *lex = t->lexeme, *back;
+    time_t timestamp = time(NULL);
+    union {
+        chat_event_s *event;
+        message_s *message;
+        edit_users_s *edit;
+    } events;
+
     
-    /* temp user to prevent segfaults in processing */
+    /* blank user to prevent segfaults in processing errors */
     static user_s *blank = NULL;
     
     if(!blank)
@@ -309,9 +309,16 @@ inline char *nexttoken(connect_inst_s *conn)
             break;
         case 'U':
             u = parse_uname(conn);
-            pthread_mutex_lock(&conn->chat.lock);
             adduser(u);
-            uenque(conn, u, true);
+
+            events.edit = alloc(sizeof(*events.edit));
+            events.edit->base.type = EVENT_EDIT_USERS;
+            events.edit->base.user = u;
+            events.edit->base.timestamp = timestamp;
+            events.edit->add = true;
+
+            pthread_mutex_lock(&conn->chat.lock);
+            event_enqueue(conn, events.event);
             pthread_mutex_unlock(&conn->chat.lock);
 
             pthread_mutex_lock(&monitor.lock);
@@ -319,7 +326,7 @@ inline char *nexttoken(connect_inst_s *conn)
             pthread_mutex_unlock(&monitor.lock);
             break;
         case 'M':
-            message = alloc(sizeof(*message));
+            events.message = alloc(sizeof(*events.message));
             
             /* get id of sender */
             *lex++ = netgetchar(conn);
@@ -330,33 +337,24 @@ inline char *nexttoken(connect_inst_s *conn)
             u = userlookup(t->lexeme);
             if(u) {
                 name = u->name;
-                message->user = u;
+                events.message->base.user = u;
             }
             else
-                message->user = blank;
+                events.message->base.user = blank;
+            events.message->base.type = EVENT_CHAT_MSG;
+            events.message->base.timestamp = timestamp;
             /* get type of message */
-            message->type = netgetchar(conn);
+            events.message->type = netgetchar(conn);
             
             /* get message content */
-            lex = message->text;
+            lex = events.message->text;
             while((*lex++ = netgetchar(conn)));
 
             chptr = &conn->chat;
-            message->is_consumed = false;
-            message->next = NULL;
 
             pthread_mutex_lock(&chptr->lock);
-            if(chptr->head) {
-                message->prev = chptr->tail;
-                chptr->tail->next = message;
-                chptr->tail = message;
-            }
-            else {
-                message->prev = NULL;
-                chptr->head = message;
-                chptr->tail = message;
-            }
-           pthread_mutex_unlock(&chptr->lock);
+            event_enqueue(conn, events.event);
+            pthread_mutex_unlock(&chptr->lock);
 
 
             pthread_mutex_lock(&monitor.lock);
@@ -371,8 +369,13 @@ inline char *nexttoken(connect_inst_s *conn)
             
             u = userlookup(t->lexeme);
             if(u) {
+                events.edit = alloc(sizeof(*events.edit));
+                events.edit->base.user = u;
+                events.edit->base.timestamp = timestamp;
+                events.edit->base.type = EVENT_EDIT_USERS;
+                events.edit->add = false;
                 pthread_mutex_lock(&conn->chat.lock);
-                uenque(conn, u, false);
+                event_enqueue(conn, events.event);
                 pthread_mutex_unlock(&conn->chat.lock);
 
                 pthread_mutex_lock(&monitor.lock);
@@ -499,29 +502,32 @@ inline void msg_unlock(connect_inst_s *conn)
     pthread_mutex_unlock(&conn->chat.lock);
 }
 
-void uenque(connect_inst_s *conn, user_s *u, bool add)
+void event_enqueue(connect_inst_s *conn, chat_event_s *event)
 {
-    user_event_queue_s *n = alloc(sizeof(*n));
-    
-    n->add = add;
-    n->uptr = u;
-    n->next = NULL;
-    if(conn->uqueue.head)
-        conn->uqueue.tail->next = n;
-    else
-        conn->uqueue.head = n;
-    conn->uqueue.tail = n;
+    if(conn->uqueue.head) {
+        conn->uqueue.tail->next = event;
+        event->prev = conn->uqueue.tail;
+    }
+    else {
+        event->prev = NULL;
+        conn->uqueue.head = event;
+    }
+    event->next = NULL;
+    conn->uqueue.tail = event;
 }
 
-user_event_queue_s *udequeue(connect_inst_s *conn)
+chat_event_s *event_dequeue(connect_inst_s *conn)
 {
-    user_event_queue_s *next = conn->uqueue.head;
-    if(next)
+    chat_event_s *next = conn->uqueue.head;
+    if(next) {
         conn->uqueue.head = conn->uqueue.head->next;
+        if(conn->uqueue.head)
+            conn->uqueue.head->prev = NULL;
+    }
     return next;
 }
 
-void send_message(char *message, int sock)
+void send_message(connect_inst_s *conn, const char *message)
 {
     char buf[256];
     
@@ -531,7 +537,7 @@ void send_message(char *message, int sock)
     }
     buf[0] = '9';
     strcpy(&buf[1], message);
-    send(sock, buf, strlen(buf)+1, 0);
+    send(conn->sock, buf, strlen(buf)+1, 0);
 }
 
 connect_inst_s *get_connectinst(char *uname)

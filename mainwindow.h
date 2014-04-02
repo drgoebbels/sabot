@@ -20,8 +20,8 @@ class MonitorThread : public QThread
 {
     Q_OBJECT
 signals:
-    void messageReceived(connect_inst_s *conn);
-    void updateUserList(user_s *u, bool add);
+    void messageReceived(message_s *conn);
+    void updateUserList(edit_users_s *);
 
 public:
     MonitorThread(Ui::MainWindow *parent);
@@ -40,14 +40,13 @@ public:
     LoginPrompt *lp;
 
 public slots:
-    void postMessage();
-    void postRemoteMessage(connect_inst_s *conn);
+    void sendMessage();
+    void postRemoteMessage(message_s *conn);
     void loginButtonClicked();
     void loginAccept();
-    void addUser(user_s *u, bool add);
+    void editUsers(edit_users_s *);
 
 signals:
-    void returnPressed();
 
 private:
     Ui::MainWindow *ui;

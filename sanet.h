@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <sys/time.h>
 #include <pthread.h>
 
 #define PORT                1138
@@ -29,9 +30,19 @@ extern "C" {
 #define MAX_UNAME_PASS 20
 #define UID_TABLE_SIZE 53
 
+    
+enum event_types_e {
+    EVENT_CHAT_MSG,
+    EVENT_EDIT_USERS
+};
+
 typedef struct chatbox_s chatbox_s;
 typedef struct token_s token_s;
-typedef struct user_event_queue_s user_event_queue_s;
+
+typedef struct chat_event_s chat_event_s;
+typedef struct message_s message_s;
+typedef struct edit_users_s edit_users_s;
+
 typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
 typedef struct monitor_s monitor_s;
@@ -40,8 +51,6 @@ typedef struct user_s user_s;
 typedef struct uid_record_s uid_record_s;
 typedef struct uid_hash_s uid_hash_s;
 
-/*event types*/
-typedef struct edit_users_s edit_users_s;
 
 struct chatbox_s
 {
@@ -56,13 +65,29 @@ struct token_s
     char lexeme[LEXEME_SIZE];
     token_s *next;
 };
-    
-struct user_event_queue_s {
-    user_event_queue_s *next;
-    bool add;
-    user_s *uptr;
+
+struct chat_event_s
+{
+    chat_event_s *prev;
+    chat_event_s *next;
+    user_s *user;
+    time_t timestamp;
+    enum event_types_e type;
 };
-    
+
+struct message_s
+{
+    chat_event_s base;
+    char text[148];
+    char type;
+};
+
+struct edit_users_s
+{
+    chat_event_s base;
+    bool add;
+};
+
 struct connect_inst_s
 {
     int c;
@@ -77,8 +102,8 @@ struct connect_inst_s
     char buf[BUF_SIZE];
     token_s tok;
     struct {
-        user_event_queue_s *head;
-        user_event_queue_s *tail;
+        chat_event_s *head;
+        chat_event_s *tail;
     }
     uqueue;
     connect_inst_s *next;
@@ -134,16 +159,18 @@ extern uid_hash_s sanet_users;
 extern monitor_s monitor;
 
 extern connect_inst_s *connlist;
+extern connect_inst_s *conncurr;
 
 extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
+extern void send_message(connect_inst_s *conn, const char *message);
 extern void wait_message(void);
 extern void release_message(void);
 extern connect_inst_s *get_connectinst(char *uname);
 extern inline void msg_lock(connect_inst_s *conn);
 extern inline void msg_unlock(connect_inst_s *conn);
 
-extern void uenque(connect_inst_s *conn, user_s *u, bool add);
-extern user_event_queue_s *udequeue(connect_inst_s *conn);
+extern void event_enqueue(connect_inst_s *conn, chat_event_s *event);
+extern chat_event_s *event_dequeue(connect_inst_s *conn);
 
 extern void adduser(user_s *u);
 extern user_s *userlookup(char *uid);
