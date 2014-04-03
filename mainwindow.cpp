@@ -3,6 +3,7 @@
 
 #include <QListWidget>
 #include <QListWidgetItem>
+#include <QTableWidget>
 
 /*
  * Not Where I wanted to place this, but so far this is
@@ -35,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
     connect(monitor, SIGNAL(messageReceived(message_s *)), this, SLOT(postRemoteMessage(message_s *)));
     connect(monitor, SIGNAL(updateUserList(edit_users_s *)), this, SLOT(editUsers(edit_users_s *)));
+    connect(monitor, SIGNAL(editGames(edit_games_s*)), this, SLOT(editGamesSlot(edit_games_s*)));
 
     monitor->start();
 }
@@ -43,8 +45,8 @@ void MainWindow::sendMessage()
 {
     const char *str = ui->messageBox->text().toStdString().c_str();
 
-    ui->messageBox->clear();
     send_message(conncurr, str);
+    ui->messageBox->clear();
 }
 
 void MainWindow::postRemoteMessage(message_s *msg)
@@ -59,8 +61,6 @@ void MainWindow::postRemoteMessage(message_s *msg)
     }
     message.append("<");
     message.append(sender->name);
-    message.append(":");
-    message.append(sender->id);
     message.append("> ");
     message.append(msg->text);
     chatList->addItem(message.c_str());
@@ -94,29 +94,36 @@ void MainWindow::editUsers(edit_users_s *edit)
 {
     user_s *u = edit->base.user;
     QWidget* tab = ui->serverTabs->currentWidget();
-    QListWidget *userList = tab->findChild<QListWidget *>("userList");
-    QListWidget *chatList = tab->findChild<QListWidget *>("chatList");
-    std::string user(" ");
-    std::string message(u->name);
-    user.append(u->id);
-    user.append(" -> ");
-    user.append(u->name);
+    QTableWidget *userList = tab->findChild<QTableWidget *>("userTable");
+    std::string user(u->name);
 
     if(u->mod_level > '0')
         user.append(": M");
     if(edit->add) {
-        message.append(" joined lobby.");
-        userList->addItem(user.c_str());
-        chatList->addItem(message.c_str());
+        int c = userList->rowCount();
+        userList->insertRow(c);
+        userList->setItem(c, 0, new QTableWidgetItem(QString::fromStdString(user)));
+        userList->setItem(c, 1, new QTableWidgetItem(u->id));
+        userList->setColumnWidth(1, 50);
     }
     else {
-        message.append(" left lobby.");
-        QList<QListWidgetItem *> childList = userList->findItems(user.c_str(), Qt::MatchExactly);
-        if(childList.size() > 0)
-            delete childList.first();
-        chatList->addItem(message.c_str());
+        QList<QTableWidgetItem *> item = userList->findItems(user.c_str(), Qt::MatchExactly);
+
+        userList->removeRow(item.first()->row());
     }
-    chatList->scrollToBottom();
+}
+
+void MainWindow::editGamesSlot(edit_games_s *game)
+{
+    QListWidget *gameList = ui->tab->findChild<QListWidget *>("gameList");
+    QList<QListWidgetItem *> items = gameList->findItems(game->game_name, Qt::MatchExactly);
+
+    if(items.size() == 0) {
+        if(game->add)
+            gameList->addItem(game->game_name);
+        else
+            delete items.first();
+    }
 }
 
 void MainWindow::loginButtonClicked()
@@ -167,6 +174,9 @@ void MonitorThread::run()
                         break;
                     case EVENT_EDIT_USERS:
                         emit updateUserList((edit_users_s *)event);
+                        break;
+                    case EVENT_EDIT_GAMES:
+                        emit editGames((edit_games_s *)event);
                         break;
                     default:
                         break;

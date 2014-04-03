@@ -33,7 +33,8 @@ extern "C" {
     
 enum event_types_e {
     EVENT_CHAT_MSG,
-    EVENT_EDIT_USERS
+    EVENT_EDIT_USERS,
+    EVENT_EDIT_GAMES
 };
 
 typedef struct chatbox_s chatbox_s;
@@ -42,6 +43,7 @@ typedef struct token_s token_s;
 typedef struct chat_event_s chat_event_s;
 typedef struct message_s message_s;
 typedef struct edit_users_s edit_users_s;
+typedef struct edit_games_s edit_games_s;
 
 typedef struct connect_inst_s connect_inst_s;
 typedef struct chat_packet_s chat_packet_s;
@@ -85,6 +87,13 @@ struct message_s
 struct edit_users_s
 {
     chat_event_s base;
+    bool add;
+};
+    
+struct edit_games_s
+{
+    chat_event_s base;
+    char game_name[3200];
     bool add;
 };
 

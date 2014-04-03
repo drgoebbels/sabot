@@ -11,7 +11,7 @@
 #include "general.h"
 #include "sanet.h"
 
-#define SLEEP_TIME  20
+#define SLEEP_TIME 20
 #define LOGIN_FLAG "09"
 
 uid_hash_s sanet_users;
@@ -81,7 +81,7 @@ int socket_(const char *server)
         perror("cannot create socket");
         exit(EXIT_FAILURE);
     }
-
+    
     memset(&sockin, 0, sizeof(sockin));
     
     sockin.sin_family = AF_INET;
@@ -127,7 +127,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     send(sock, buf, strlen(buf)+1, 0);
     
     recv(sock, buf, sizeof(buf), 0);
-
+    
     send(sock, ack_x1, sizeof(ack_x1), 0);
     send(sock, ack_x2, sizeof(ack_x2), 0);
     send(sock, finish_login, sizeof(finish_login), 0);
@@ -140,41 +140,243 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->chat.tail = NULL;
     conn->next = NULL;
     pthread_mutex_init(&conn->chat.lock, NULL);
-
+    
     conn->i = 0;
     conn->len = 0;
     conn->uget = false;
     conn->uqueue.head = NULL;
-
+    
     pthread_mutex_lock(&monitor.lock);
     add_connection(conn);
     pthread_mutex_unlock(&monitor.lock);
-
+    
     conncurr = conn;
     
     pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
     pthread_create(&conn->thread, NULL, (void *(*)(void *))ack_thread, conn);
-
+    
     return conn;
 }
 
-void connect_thread(connect_inst_s *con)
+/*
+ * <uname> := U<id>#*[a-zA-Z_.,]+;[\d]+;[\d]+;[\d]+;[\d]+[\d]+;0
+ * <id> := \d\d\d
+ * <conn> := C<id>
+ * <gamelist> := 0; <gamelist'>
+ * <gamelist'> := <gamename>; <gamelist'> | E
+ * <gamename> := [a-zA-Z]+
+ */
+
+#define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
+
+void connect_thread(connect_inst_s *conn)
 {
-    int c;
-    uint64_t count = 0;
-    int sock = con->sock;
-    chat_packet_s *packet;
+    user_s *u;
+    int c, i = 0, diff;
+    chatbox_s *chptr;
+    time_t timestamp;
+    char *lex;
+    char lexbuf[32];
+    union {
+        chat_event_s *event;
+        message_s *message;
+        edit_users_s *edit;
+        edit_games_s *game;
+    } events;
     
-    while(1) {
-        nexttoken(con);
-        if(monitor.inuse) {
-           // pthread_mutex_lock(&monitor.lock);
-          //  pthread_cond_signal(&monitor.cond);
-           // pthread_mutex_unlock(&monitor.lock);
+    /* blank user to prevent segfaults in processing errors */
+
+    static user_s blank;
+    
+    while(true) {
+        i = 0;
+        lex = lexbuf;
+        c = netgetchar(conn);
+
+        switch(c) {
+            case '0':
+                c = netgetchar(conn);
+                if(c == '1') {
+                    c = netgetchar(conn);
+                    if(c == '_') {
+                        c = netgetchar(conn);
+                        if(c == '0') {
+                            c = netgetchar(conn);
+                            while(c == ';') {
+                                timestamp = time(NULL);
+                                events.game = alloc(sizeof(*events.game));
+                                lex = events.game->game_name;
+                                while((c = netgetchar(conn)) != ';')
+                                    *lex++ = c;
+                                if(lex - events.game->game_name > 1) {
+                                    *--lex = '\0';
+                                    events.game->add = true;
+                                    events.game->base.timestamp = timestamp;
+                                    events.game->base.user = NULL;
+                                    printf("parsed: %s\n", events.game->game_name);
+                                    events.game->base.type = EVENT_EDIT_GAMES;
+                                    pthread_mutex_lock(&conn->chat.lock);
+                                    event_enqueue(conn, events.event);
+                                    pthread_mutex_unlock(&conn->chat.lock);
+                                }
+                                else {
+                                    free(events.game);
+                                    *lex = '\0';
+                                }
+                                c = netgetchar(conn);
+                            }
+                        }
+                    }
+                }
+                if(c == ';') {
+                    /**/
+                }
+                break;
+            case 'C':
+                c = netgetchar(conn);
+                if(is_idchar_()) {
+                    c = netgetchar(conn);
+                    if(is_idchar_()){
+                        c = netgetchar(conn);
+                    }
+                }
+                break;
+            case 'U':
+                timestamp = time(NULL);
+                
+                u = alloc(sizeof(*u));
+                
+                lex = u->id;
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex = '\0';
+                
+                while((c = netgetchar(conn)) == '#')
+                    i++;
+                diff = MAX_UNAME_PASS-i-1;
+                
+                lex = u->name;
+                *lex++ = c;
+                for(i = 0; i < diff; i++)
+                    *lex++ = netgetchar(conn);
+                *lex = '\0';
+
+                lex = u->field1;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+
+                lex = u->field2;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+                
+                lex = u->field3;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+                
+                lex = u->field4;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+                
+                lex = u->field5;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+                
+                lex = u->field6;
+                while((c = netgetchar(conn)) != ';')
+                    *lex++ = c;
+                *lex = '\0';
+                
+                u->mod_level = netgetchar(conn);
+                adduser(u);
+                
+                events.edit = alloc(sizeof(*events.edit));
+                events.edit->base.type = EVENT_EDIT_USERS;
+                events.edit->base.user = u;
+                events.edit->base.timestamp = timestamp;
+                events.edit->add = true;
+                
+                pthread_mutex_lock(&conn->chat.lock);
+                event_enqueue(conn, events.event);
+                pthread_mutex_unlock(&conn->chat.lock);
+                
+                pthread_mutex_lock(&monitor.lock);
+                pthread_cond_signal(&monitor.cond);
+                pthread_mutex_unlock(&monitor.lock);
+                netgetchar(conn);
+                break;
+            case 'M':
+                events.message = alloc(sizeof(*events.message));
+                
+                /* get id of sender */
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex = '\0';
+                
+                u = userlookup(lexbuf);
+                if(u)
+                    events.message->base.user = u;
+                else
+                    events.message->base.user = &blank;
+                events.message->base.type = EVENT_CHAT_MSG;
+                events.message->base.timestamp = timestamp;
+                /* get type of message */
+                events.message->type = netgetchar(conn);
+                
+                /* get message content */
+                lex = events.message->text;
+                while((*lex++ = netgetchar(conn)));
+
+                chptr = &conn->chat;
+                
+                pthread_mutex_lock(&chptr->lock);
+                event_enqueue(conn, events.event);
+                pthread_mutex_unlock(&chptr->lock);
+                
+                
+                pthread_mutex_lock(&monitor.lock);
+                pthread_cond_signal(&monitor.cond);
+                pthread_mutex_unlock(&monitor.lock);
+                break;
+            case 'D':
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex++ = netgetchar(conn);
+                *lex = '\0';
+                
+                u = userlookup(lexbuf);
+                if(u) {
+                    events.edit = alloc(sizeof(*events.edit));
+                    events.edit->base.user = u;
+                    events.edit->base.timestamp = timestamp;
+                    events.edit->base.type = EVENT_EDIT_USERS;
+                    events.edit->add = false;
+                    pthread_mutex_lock(&conn->chat.lock);
+                    event_enqueue(conn, events.event);
+                    pthread_mutex_unlock(&conn->chat.lock);
+                    
+                    pthread_mutex_lock(&monitor.lock);
+                    pthread_cond_signal(&monitor.cond);
+                    pthread_mutex_unlock(&monitor.lock);
+                    deleteuser(lexbuf);
+                    
+                }
+                break;
+            default:
+                
+                break;
+                
         }
-        count++;
     }
 }
+
+#undef is_idchar_
 
 void ack_thread(connect_inst_s *c)
 {
@@ -182,23 +384,23 @@ void ack_thread(connect_inst_s *c)
     pthread_mutex_t tlock;
     pthread_cond_t tcond;
     int rc;
-    struct timespec   ts;
-    struct timeval    tp;
-        
+    struct timespec ts;
+    struct timeval tp;
+    
     pthread_mutex_init(&tlock, NULL);
     pthread_cond_init(&tcond, NULL);
-
+    
     while(true) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
         send(sock, ack_x2, sizeof(ack_x2), 0);
-
-        rc =  gettimeofday(&tp, NULL);
-
+        
+        rc = gettimeofday(&tp, NULL);
+        
         /* Convert from timeval to timespec */
-        ts.tv_sec  = tp.tv_sec;
+        ts.tv_sec = tp.tv_sec;
         ts.tv_nsec = tp.tv_usec * 1000;
         ts.tv_sec += SLEEP_TIME;
-
+        
         pthread_cond_timedwait(&tcond, &tlock, &ts);
     }
 }
@@ -233,6 +435,11 @@ inline int netgetchar(connect_inst_s *s)
         s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
         s->i = 0;
     }
+    if(s->buf[s->i])
+        putchar(s->buf[s->i]);
+    else
+        putchar('~');
+    fflush(stdout);
     return s->buf[s->i++];
 }
 
@@ -241,221 +448,6 @@ inline void netpushback(connect_inst_s *conn, int c)
     conn->c = c;
     conn->uget = true;
 }
-
-/*
- * <uname> := U<id>#*[a-zA-Z_.,]+;[\d]+;[\d]+;[\d]+;[\d]+[\d]+;0
- * <id> := \d\d\d
- * <conn> := C<id>
- * <gamelist> := 0; <gamelist'>
- * <gamelist'> := <gamename>; <gamelist'> | E
- * <gamename> := [a-zA-Z]+
- */
-
-#define is_idchar_() ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
-
-inline char *nexttoken(connect_inst_s *conn)
-{
-    user_s *u;
-    int c, i = 0;
-    token_s *t = &conn->tok;
-    char *name = "not found";
-    chatbox_s *chptr;
-    char *lex = t->lexeme, *back;
-    time_t timestamp = time(NULL);
-    union {
-        chat_event_s *event;
-        message_s *message;
-        edit_users_s *edit;
-    } events;
-
-    
-    /* blank user to prevent segfaults in processing errors */
-    static user_s *blank = NULL;
-    
-    if(!blank)
-        blank = allocz(sizeof(*blank));
-
-    c = netgetchar(conn);
-    switch(c) {
-        case '0':
-            c = netgetchar(conn);
-            if(c == '1') {
-                c = netgetchar(conn);
-                if(c == '_') {
-                    //known to be 1st received item
-
-                }
-            }
-            else if(c == ';') {
-                while(is_gamenamechar(c = netgetchar(conn)))
-                    *lex++ = c;
-
-                if(lex - t->lexeme > 0)
-                    *--lex = '\0';
-                else
-                    *lex = '\0';
-                //netpushback(conn, c);
-                //printf("\n\ngame name: %s\n\n", t->lexeme);
-            }
-            break;
-        case 'C':
-            c = netgetchar(conn);
-            if(is_idchar_()) {
-                c = netgetchar(conn);
-                if(is_idchar_()){
-                    c = netgetchar(conn);
-                }
-            }
-            break;
-        case 'U':
-            u = parse_uname(conn);
-            adduser(u);
-
-            events.edit = alloc(sizeof(*events.edit));
-            events.edit->base.type = EVENT_EDIT_USERS;
-            events.edit->base.user = u;
-            events.edit->base.timestamp = timestamp;
-            events.edit->add = true;
-
-            pthread_mutex_lock(&conn->chat.lock);
-            event_enqueue(conn, events.event);
-            pthread_mutex_unlock(&conn->chat.lock);
-
-            pthread_mutex_lock(&monitor.lock);
-            pthread_cond_signal(&monitor.cond);
-            pthread_mutex_unlock(&monitor.lock);
-            break;
-        case 'M':
-            events.message = alloc(sizeof(*events.message));
-            
-            /* get id of sender */
-            *lex++ = netgetchar(conn);
-            *lex++ = netgetchar(conn);
-            *lex++ = netgetchar(conn);
-            *lex = '\0';
-            
-            u = userlookup(t->lexeme);
-            if(u) {
-                name = u->name;
-                events.message->base.user = u;
-            }
-            else
-                events.message->base.user = blank;
-            events.message->base.type = EVENT_CHAT_MSG;
-            events.message->base.timestamp = timestamp;
-            /* get type of message */
-            events.message->type = netgetchar(conn);
-            
-            /* get message content */
-            lex = events.message->text;
-            while((*lex++ = netgetchar(conn)));
-
-            chptr = &conn->chat;
-
-            pthread_mutex_lock(&chptr->lock);
-            event_enqueue(conn, events.event);
-            pthread_mutex_unlock(&chptr->lock);
-
-
-            pthread_mutex_lock(&monitor.lock);
-            pthread_cond_signal(&monitor.cond);
-            pthread_mutex_unlock(&monitor.lock);
-            break;
-        case 'D':
-            *lex++ = netgetchar(conn);
-            *lex++ = netgetchar(conn);
-            *lex++ = netgetchar(conn);
-            *lex = '\0';
-            
-            u = userlookup(t->lexeme);
-            if(u) {
-                events.edit = alloc(sizeof(*events.edit));
-                events.edit->base.user = u;
-                events.edit->base.timestamp = timestamp;
-                events.edit->base.type = EVENT_EDIT_USERS;
-                events.edit->add = false;
-                pthread_mutex_lock(&conn->chat.lock);
-                event_enqueue(conn, events.event);
-                pthread_mutex_unlock(&conn->chat.lock);
-
-                pthread_mutex_lock(&monitor.lock);
-                pthread_cond_signal(&monitor.cond);
-                pthread_mutex_unlock(&monitor.lock);
-                deleteuser(t->lexeme);
-
-            }
-            break;
-        default:
-            
-            break;
-
-    }
-exit_:
-    t->lexeme[i] = '\0';
-    return t;
-}
-
-user_s *parse_uname(connect_inst_s *conn)
-{
-#define is_idchar_(c) ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
-
-    int c, i = 0, diff;
-    char *lex;
-    user_s *u = allocz(sizeof(*u));
-
-    lex = u->id;
-
-    *lex++ = netgetchar(conn);
-    assert(is_idchar_(*(lex-1)));
-
-    *lex++ = netgetchar(conn);
-    assert(is_idchar_(*(lex-1)));
-
-    *lex++ = netgetchar(conn);
-    assert(is_idchar_(*(lex-1)));
-
-    while((c = netgetchar(conn)) == '#')
-        i++;
-    diff = MAX_UNAME_PASS-i-1;
-
-    lex = u->name;
-    *lex++ = c;
-    for(i = 0; i < diff; i++)
-        *lex++ = netgetchar(conn);
-
-    lex = u->field1;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    lex = u->field2;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    lex = u->field3;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    lex = u->field4;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    lex = u->field5;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    lex = u->field6;
-    while((c = netgetchar(conn)) != ';')
-        *lex++ = c;
-
-    u->mod_level = netgetchar(conn);
-
-    putchar('\n');
-    print_user(u);
-    fflush(stdout);
-    return u;
-}
-
-#undef is_idchar_
 
 void print_user(user_s *s)
 {
@@ -474,22 +466,22 @@ void print_user(user_s *s)
 
 inline bool is_namechar(int c)
 {
-    return  (c >= 'a' && c <= 'z')
-            ||
-            (c >= '0' && c <= '9')
-            ||
-            (c == '.' || c == '_' || c == ',')
-            ||
-            (c >= 'A' && c <= 'Z');
+    return (c >= 'a' && c <= 'z')
+    ||
+    (c >= '0' && c <= '9')
+    ||
+    (c == '.' || c == '_' || c == ',')
+    ||
+    (c >= 'A' && c <= 'Z');
 }
 
 inline bool is_gamenamechar(int c)
 {
-    return  (c >= 'a' && c <= 'z')
-            ||
-            (c >= '0' && c <= '9')
-            ||
-            c == '.' || c == ',' || c == ' ' || c == '!';
+    return (c >= 'a' && c <= 'z')
+    ||
+    (c >= '0' && c <= '9')
+    ||
+    c == '.' || c == ',' || c == ' ' || c == '!';
 }
 
 inline void msg_lock(connect_inst_s *conn)

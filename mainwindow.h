@@ -22,6 +22,7 @@ class MonitorThread : public QThread
 signals:
     void messageReceived(message_s *conn);
     void updateUserList(edit_users_s *);
+    void editGames(edit_games_s *);
 
 public:
     MonitorThread(Ui::MainWindow *parent);
@@ -45,8 +46,10 @@ public slots:
     void loginButtonClicked();
     void loginAccept();
     void editUsers(edit_users_s *);
+    void editGamesSlot(edit_games_s *);
 
 signals:
+
 
 private:
     Ui::MainWindow *ui;
