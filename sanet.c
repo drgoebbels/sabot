@@ -225,7 +225,6 @@ void connect_thread(connect_inst_s *conn)
                                 }
                                 else {
                                     free(node);
-                                    free(events.game);
                                 }
                                 c = netgetc(conn);
                             }

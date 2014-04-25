@@ -140,6 +140,7 @@ void MainWindow::editGamesSlot(edit_games_s *game)
     for(g = game->glist; g; g = bg) {
         gameList->addItem(g->name);
         bg = g->next;
+        free(g);
     }
     free(game);
 }
