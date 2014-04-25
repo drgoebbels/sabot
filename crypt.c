@@ -2,7 +2,8 @@
  DO NOT COMPILE WITH -fstrict-aliasing
  
  sha512 implementation as specified by nist. Not entirely compliant due to lack
- of support of 128-bit message lengths.
+ of support of 128-bit message lengths (that is, 128-bit integer for representing
+ length)
  
  further down is an aes implementation as specified by nist.
  */

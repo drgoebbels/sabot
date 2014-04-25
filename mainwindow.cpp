@@ -4,6 +4,7 @@
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QTableWidget>
+#include <QTableWidgetItem>
 
 /*
  * Not Where I wanted to place this, but so far this is
@@ -43,9 +44,18 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::sendMessage()
 {
-    const char *str = ui->messageBox->text().toStdString().c_str();
+    std::string temp1 = ui->messageBox->text().toStdString();
+    const char *str = temp1.c_str();
 
-    send_message(conncurr, str);
+    if(ui->privateMessage->isChecked()) {
+        QTableWidget *userList = ui->tab->findChild<QTableWidget *>("userTable");
+        QTableWidgetItem *item = userList->item(userList->currentRow(), 1);
+        std::string temp2 = ui->messageBox->text().toStdString();
+        send_pmessage(conncurr, str, temp2.c_str());
+    }
+    else {
+        send_message(conncurr, str);
+    }
     ui->messageBox->clear();
 }
 
@@ -59,9 +69,16 @@ void MainWindow::postRemoteMessage(message_s *msg)
     if(msg->type == 'P') {
         message.append(" [private] ");
     }
-    message.append("<");
-    message.append(sender->name);
-    message.append("> ");
+    if(sender->mod_level == '0') {
+        message.append("<");
+        message.append(sender->name);
+        message.append("> ");
+    }
+    else {
+        message.append("<<");
+        message.append(sender->name);
+        message.append(">> ");
+    }
     message.append(msg->text);
     chatList->addItem(message.c_str());
     chatList->scrollToBottom();
@@ -96,18 +113,19 @@ void MainWindow::editUsers(edit_users_s *edit)
     QWidget* tab = ui->serverTabs->currentWidget();
     QTableWidget *userList = tab->findChild<QTableWidget *>("userTable");
     std::string user(u->name);
+    std::string id(u->id);
 
-    if(u->mod_level > '0')
-        user.append(": M");
     if(edit->add) {
         int c = userList->rowCount();
+        if(u->mod_level > '0')
+            id.append("     M");
         userList->insertRow(c);
         userList->setItem(c, 0, new QTableWidgetItem(QString::fromStdString(user)));
         userList->setItem(c, 1, new QTableWidgetItem(u->id));
         userList->setColumnWidth(1, 50);
     }
     else {
-        QList<QTableWidgetItem *> item = userList->findItems(user.c_str(), Qt::MatchExactly);
+        QList<QTableWidgetItem *> item = userList->findItems(QString::fromStdString(id), Qt::MatchExactly);
 
         userList->removeRow(item.first()->row());
     }

@@ -59,7 +59,7 @@ static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
-static inline int netgetchar(connect_inst_s *conn);
+static inline int netgetc(connect_inst_s *conn);
 static inline void netpushback(connect_inst_s *conn, int c);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
@@ -191,29 +191,29 @@ void connect_thread(connect_inst_s *conn)
     while(true) {
         i = 0;
         lex = lexbuf;
-        c = netgetchar(conn);
+        c = netgetc(conn);
 
         switch(c) {
             case '0':
-                c = netgetchar(conn);
+                c = netgetc(conn);
                 if(c == '1') {
-                    c = netgetchar(conn);
+                    c = netgetc(conn);
                     if(c == '_') {
-                        c = netgetchar(conn);
+                        c = netgetc(conn);
                         if(c == '0') {
-                            c = netgetchar(conn);
-                            while(c == ';') {
+                            c = netgetc(conn);
+                            while(c) {
                                 timestamp = time(NULL);
                                 events.game = alloc(sizeof(*events.game));
                                 lex = events.game->game_name;
-                                while((c = netgetchar(conn)) != ';')
+                                while((c = netgetc(conn)) != ';')
                                     *lex++ = c;
                                 if(lex - events.game->game_name > 1) {
                                     *--lex = '\0';
                                     events.game->add = true;
                                     events.game->base.timestamp = timestamp;
                                     events.game->base.user = NULL;
-                                    printf("parsed: %s\n", events.game->game_name);
+                                  //  printf("parsed: %s\n", events.game->game_name);
                                     events.game->base.type = EVENT_EDIT_GAMES;
                                     pthread_mutex_lock(&conn->chat.lock);
                                     event_enqueue(conn, events.event);
@@ -223,23 +223,21 @@ void connect_thread(connect_inst_s *conn)
                                     free(events.game);
                                     *lex = '\0';
                                 }
-                                c = netgetchar(conn);
+                                c = netgetc(conn);
                             }
                         }
                     }
                 }
-                if(c == ';') {
-                    /**/
-                }
                 break;
             case 'C':
-                c = netgetchar(conn);
+                c = netgetc(conn);
                 if(is_idchar_()) {
-                    c = netgetchar(conn);
+                    c = netgetc(conn);
                     if(is_idchar_()){
-                        c = netgetchar(conn);
+                        c = netgetc(conn);
                     }
                 }
+                netgetc(conn);
                 break;
             case 'U':
                 timestamp = time(NULL);
@@ -247,52 +245,52 @@ void connect_thread(connect_inst_s *conn)
                 u = alloc(sizeof(*u));
                 
                 lex = u->id;
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
                 *lex = '\0';
                 
-                while((c = netgetchar(conn)) == '#')
+                while((c = netgetc(conn)) == '#')
                     i++;
                 diff = MAX_UNAME_PASS-i-1;
                 
                 lex = u->name;
                 *lex++ = c;
                 for(i = 0; i < diff; i++)
-                    *lex++ = netgetchar(conn);
+                    *lex++ = netgetc(conn);
                 *lex = '\0';
 
                 lex = u->field1;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
 
                 lex = u->field2;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
                 
                 lex = u->field3;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
                 
                 lex = u->field4;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
                 
                 lex = u->field5;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
                 
                 lex = u->field6;
-                while((c = netgetchar(conn)) != ';')
+                while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
                 
-                u->mod_level = netgetchar(conn);
+                u->mod_level = netgetc(conn);
                 adduser(u);
                 
                 events.edit = alloc(sizeof(*events.edit));
@@ -308,15 +306,15 @@ void connect_thread(connect_inst_s *conn)
                 pthread_mutex_lock(&monitor.lock);
                 pthread_cond_signal(&monitor.cond);
                 pthread_mutex_unlock(&monitor.lock);
-                netgetchar(conn);
+                netgetc(conn);
                 break;
             case 'M':
                 events.message = alloc(sizeof(*events.message));
                 
                 /* get id of sender */
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
                 *lex = '\0';
                 
                 u = userlookup(lexbuf);
@@ -327,11 +325,11 @@ void connect_thread(connect_inst_s *conn)
                 events.message->base.type = EVENT_CHAT_MSG;
                 events.message->base.timestamp = timestamp;
                 /* get type of message */
-                events.message->type = netgetchar(conn);
+                events.message->type = netgetc(conn);
                 
                 /* get message content */
                 lex = events.message->text;
-                while((*lex++ = netgetchar(conn)));
+                while((*lex++ = netgetc(conn)));
 
                 chptr = &conn->chat;
                 
@@ -345,9 +343,9 @@ void connect_thread(connect_inst_s *conn)
                 pthread_mutex_unlock(&monitor.lock);
                 break;
             case 'D':
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
-                *lex++ = netgetchar(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
+                *lex++ = netgetc(conn);
                 *lex = '\0';
                 
                 u = userlookup(lexbuf);
@@ -365,13 +363,11 @@ void connect_thread(connect_inst_s *conn)
                     pthread_cond_signal(&monitor.cond);
                     pthread_mutex_unlock(&monitor.lock);
                     deleteuser(lexbuf);
-                    
                 }
+                netgetc(conn);
                 break;
             default:
-                
                 break;
-                
         }
     }
 }
@@ -425,7 +421,7 @@ void release_message(void)
     pthread_mutex_unlock(&monitor.lock);
 }
 
-inline int netgetchar(connect_inst_s *s)
+inline int netgetc(connect_inst_s *s)
 {
     if(s->uget) {
         s->uget = false;
@@ -438,7 +434,7 @@ inline int netgetchar(connect_inst_s *s)
     if(s->buf[s->i])
         putchar(s->buf[s->i]);
     else
-        putchar('~');
+        puts("\n");
     fflush(stdout);
     return s->buf[s->i++];
 }
@@ -532,6 +528,25 @@ void send_message(connect_inst_s *conn, const char *message)
     send(conn->sock, buf, strlen(buf)+1, 0);
 }
 
+void send_pmessage(connect_inst_s *conn, const char *message, const char *id)
+{
+    char buf[256];
+
+    if(strlen(message) > 249) {
+        printf("message too long");
+        return;
+    }
+    buf[0] = '0';
+    buf[1] = '0';
+    buf[2] = id[0];
+    buf[3] = id[1];
+    buf[4] = id[2];
+    buf[5] = 'P';
+
+    strcpy(&buf[6], message);
+    send(conn->sock, buf, strlen(buf)+1, 0);
+}
+
 connect_inst_s *get_connectinst(char *uname)
 {
     connect_inst_s *c;
@@ -597,11 +612,11 @@ void deleteuser(char *uid)
         if(k == tmp) {
             if(last) {
                 last->next = rec->next;
-                free(rec);
             }
             else {
                 sanet_users.table[index] = NULL;
             }
+            free(rec);
             return;
         }
         last = rec;
@@ -629,5 +644,6 @@ uint16_t uid_hash(char *uid)
         h ^= (g >> 24);
         h ^= g;
     }
+    assert(!uid[3]);
     return h % UID_TABLE_SIZE;
 }
