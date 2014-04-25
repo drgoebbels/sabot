@@ -52,6 +52,7 @@ typedef struct user_s user_s;
     
 typedef struct uid_record_s uid_record_s;
 typedef struct uid_hash_s uid_hash_s;
+typedef struct gamelist_s gamelist_s;
 
 
 struct chatbox_s
@@ -93,8 +94,8 @@ struct edit_users_s
 struct edit_games_s
 {
     chat_event_s base;
-    char game_name[3200];
-    bool add;
+    gamelist_s *glist;
+    gamelist_s *tail;
 };
 
 struct connect_inst_s
@@ -161,6 +162,12 @@ struct uid_hash_s
 {
     int size;
     uid_record_s *table[UID_TABLE_SIZE];
+};
+    
+struct gamelist_s
+{
+    char name[32];
+    gamelist_s *next;
 };
     
 extern uid_hash_s sanet_users;

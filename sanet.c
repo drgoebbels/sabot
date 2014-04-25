@@ -64,6 +64,7 @@ static inline void netpushback(connect_inst_s *conn, int c);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
 static inline bool is_gamenamechar(int c);
+static void glist_add(edit_games_s *games, gamelist_s *node);
 
 static user_s *parse_uname(connect_inst_s *conn);
 static void print_user(user_s *s);
@@ -176,6 +177,7 @@ void connect_thread(connect_inst_s *conn)
     chatbox_s *chptr;
     time_t timestamp;
     char *lex;
+    gamelist_s *node;
     char lexbuf[32];
     union {
         chat_event_s *event;
@@ -202,26 +204,28 @@ void connect_thread(connect_inst_s *conn)
                         c = netgetc(conn);
                         if(c == '0') {
                             c = netgetc(conn);
+                            events.game = alloc(sizeof(*events.game));
+                            events.game->glist = NULL;
                             while(c) {
                                 timestamp = time(NULL);
-                                events.game = alloc(sizeof(*events.game));
-                                lex = events.game->game_name;
+                                node = alloc(sizeof(*node));
+                                lex = node->name;
                                 while((c = netgetc(conn)) != ';')
                                     *lex++ = c;
-                                if(lex - events.game->game_name > 1) {
+                                if(lex - events.game->glist->name > 1) {
                                     *--lex = '\0';
-                                    events.game->add = true;
+                                    node->next = NULL;
+                                    glist_add(events.game, node);
                                     events.game->base.timestamp = timestamp;
                                     events.game->base.user = NULL;
-                                  //  printf("parsed: %s\n", events.game->game_name);
                                     events.game->base.type = EVENT_EDIT_GAMES;
                                     pthread_mutex_lock(&conn->chat.lock);
                                     event_enqueue(conn, events.event);
                                     pthread_mutex_unlock(&conn->chat.lock);
                                 }
                                 else {
+                                    free(node);
                                     free(events.game);
-                                    *lex = '\0';
                                 }
                                 c = netgetc(conn);
                             }
@@ -289,6 +293,8 @@ void connect_thread(connect_inst_s *conn)
                 while((c = netgetc(conn)) != ';')
                     *lex++ = c;
                 *lex = '\0';
+                
+                printf("Adding: %s\n", u->name);
                 
                 u->mod_level = netgetc(conn);
                 adduser(u);
@@ -479,6 +485,16 @@ inline bool is_gamenamechar(int c)
     ||
     c == '.' || c == ',' || c == ' ' || c == '!';
 }
+
+void glist_add(edit_games_s *games, gamelist_s *node)
+{
+    if(games->glist)
+        games->tail->next = node;
+    else
+        games->glist = node;
+    games->tail = node;
+}
+
 
 inline void msg_lock(connect_inst_s *conn)
 {

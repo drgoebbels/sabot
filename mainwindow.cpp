@@ -133,15 +133,15 @@ void MainWindow::editUsers(edit_users_s *edit)
 
 void MainWindow::editGamesSlot(edit_games_s *game)
 {
+    gamelist_s *g, *bg;
     QListWidget *gameList = ui->tab->findChild<QListWidget *>("gameList");
-    QList<QListWidgetItem *> items = gameList->findItems(game->game_name, Qt::MatchExactly);
 
-    if(items.size() == 0) {
-        if(game->add)
-            gameList->addItem(game->game_name);
-        else
-            delete items.first();
+    gameList->clear();
+    for(g = game->glist; g; g = bg) {
+        gameList->addItem(g->name);
+        bg = g->next;
     }
+    free(game);
 }
 
 void MainWindow::loginButtonClicked()
