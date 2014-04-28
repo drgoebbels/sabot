@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>994</width>
-    <height>672</height>
+    <width>997</width>
+    <height>696</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,9 +30,9 @@
    <widget class="QPushButton" name="addLogin">
     <property name="geometry">
      <rect>
-      <x>870</x>
+      <x>860</x>
       <y>570</y>
-      <width>101</width>
+      <width>111</width>
       <height>32</height>
      </rect>
     </property>
@@ -269,13 +269,26 @@
      <string>private</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="pmBroadcast">
+    <property name="geometry">
+     <rect>
+      <x>860</x>
+      <y>600</y>
+      <width>114</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>pm broadcast</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>994</width>
+     <width>997</width>
      <height>22</height>
     </rect>
    </property>

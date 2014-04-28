@@ -11,8 +11,13 @@
 #include "general.h"
 #include "sanet.h"
 
+#ifdef NDEBUG
+    #define	traffic_log(a) ((void)0)
+#endif
+
 #define SLEEP_TIME 20
 #define LOGIN_FLAG "09"
+
 
 uid_hash_s sanet_users;
 
@@ -25,6 +30,7 @@ monitor_s monitor = {
     .lock = PTHREAD_MUTEX_INITIALIZER
 };
 
+static FILE *traf_log;
 static connect_inst_s *connlist_tail;
 
 /* Initial Packet Sent when logging in */
@@ -68,6 +74,8 @@ static void glist_add(edit_games_s *games, gamelist_s *node);
 
 static user_s *parse_uname(connect_inst_s *conn);
 static void print_user(user_s *s);
+static void printstr_n(char *str, size_t size);
+static inline void traffic_log(int c);
 
 static uint16_t uid_hash(char *uid);
 
@@ -110,16 +118,43 @@ int socket_(const char *server)
 
 connect_inst_s *login(const char *server, const char *uname, const char *pass)
 {
-    int sock;
+    int sock, c;
+    user_s *self;
     char buf[2*MAX_UNAME_PASS+5];
     connect_inst_s *conn;
+    edit_users_s *edit;
+    char lname[strlen(uname)+sizeof(".log")];
+    time_t timestamp;
+    
     
     if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > 2*MAX_UNAME_PASS+5) {
         fprintf(stderr, "Input too large you retard\n");
         return NULL;
     }
     
+#ifndef NDEBUG
+    strcpy(lname, uname);
+    strcpy(&lname[strlen(uname)], ".log");
+    traf_log = fopen(lname, "w");
+    if(!traf_log) {
+        perror("Failed To Create Log File");
+        exit(EXIT_FAILURE);
+    }
+#endif
+    
     sock = socket_(server);
+
+    conn = alloc(sizeof(*conn));
+    conn->server = server;
+    conn->sock = sock;
+    conn->chat.head = NULL;
+    conn->chat.tail = NULL;
+    conn->next = NULL;
+    conn->i = 0;
+    conn->len = 0;
+    conn->uget = false;
+    conn->uqueue.head = NULL;
+    pthread_mutex_init(&conn->chat.lock, NULL);
     
     send(sock, init_send, sizeof(init_send), 0);
     recv(sock, buf, sizeof(buf), 0);
@@ -127,26 +162,34 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     sprintf(buf, LOGIN_FLAG "%s;%s", uname, pass);
     send(sock, buf, strlen(buf)+1, 0);
     
-    recv(sock, buf, sizeof(buf), 0);
-    
+    //recv(sock, buf, sizeof(buf), 0);
+    c = netgetc(conn);
+    if(c == 'A') {
+        self = parse_uname(conn);
+        adduser(self);
+
+        timestamp = time(NULL);
+
+        edit = alloc(sizeof(*edit));
+        edit->base.type = EVENT_EDIT_USERS;
+        edit->base.user = self;
+        edit->base.timestamp = timestamp;
+        edit->add = true;
+
+        pthread_mutex_lock(&conn->chat.lock);
+        event_enqueue(conn, (chat_event_s *)edit);
+        pthread_mutex_unlock(&conn->chat.lock);
+
+        pthread_mutex_lock(&monitor.lock);
+        pthread_cond_signal(&monitor.cond);
+        pthread_mutex_unlock(&monitor.lock);
+        netgetc(conn);
+    }
+
     send(sock, ack_x1, sizeof(ack_x1), 0);
     send(sock, ack_x2, sizeof(ack_x2), 0);
     send(sock, finish_login, sizeof(finish_login), 0);
-    recv(sock, buf, sizeof(buf), 0);
-    
-    conn = alloc(sizeof(*conn));
-    conn->server = server;
-    conn->sock = sock;
-    conn->chat.head = NULL;
-    conn->chat.tail = NULL;
-    conn->next = NULL;
-    pthread_mutex_init(&conn->chat.lock, NULL);
-    
-    conn->i = 0;
-    conn->len = 0;
-    conn->uget = false;
-    conn->uqueue.head = NULL;
-    
+
     pthread_mutex_lock(&monitor.lock);
     add_connection(conn);
     pthread_mutex_unlock(&monitor.lock);
@@ -173,7 +216,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
 void connect_thread(connect_inst_s *conn)
 {
     user_s *u;
-    int c, i = 0, diff;
+    int c, i = 0;
     chatbox_s *chptr;
     time_t timestamp;
     char *lex;
@@ -202,7 +245,7 @@ void connect_thread(connect_inst_s *conn)
                     c = netgetc(conn);
                     if(c == '_') {
                         c = netgetc(conn);
-                        if(c == '0') {
+                        if(c == '0' && netgetc(conn) == ';') {
                             c = netgetc(conn);
                             events.game = alloc(sizeof(*events.game));
                             events.game->glist = NULL;
@@ -210,9 +253,10 @@ void connect_thread(connect_inst_s *conn)
                                 timestamp = time(NULL);
                                 node = alloc(sizeof(*node));
                                 lex = node->name;
+                                *lex++ = c;
                                 while((c = netgetc(conn)) != ';')
                                     *lex++ = c;
-                                if(lex - events.game->glist->name > 1) {
+                                if(lex - node->name > 1) {
                                     *--lex = '\0';
                                     node->next = NULL;
                                     glist_add(events.game, node);
@@ -243,59 +287,7 @@ void connect_thread(connect_inst_s *conn)
                 netgetc(conn);
                 break;
             case 'U':
-                timestamp = time(NULL);
-                
-                u = alloc(sizeof(*u));
-                
-                lex = u->id;
-                *lex++ = netgetc(conn);
-                *lex++ = netgetc(conn);
-                *lex++ = netgetc(conn);
-                *lex = '\0';
-                
-                while((c = netgetc(conn)) == '#')
-                    i++;
-                diff = MAX_UNAME_PASS-i-1;
-                
-                lex = u->name;
-                *lex++ = c;
-                for(i = 0; i < diff; i++)
-                    *lex++ = netgetc(conn);
-                *lex = '\0';
-
-                lex = u->field1;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-
-                lex = u->field2;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-                
-                lex = u->field3;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-                
-                lex = u->field4;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-                
-                lex = u->field5;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-                
-                lex = u->field6;
-                while((c = netgetc(conn)) != ';')
-                    *lex++ = c;
-                *lex = '\0';
-                
-                printf("Adding: %s\n", u->name);
-                
-                u->mod_level = netgetc(conn);
+                u = parse_uname(conn);
                 adduser(u);
                 
                 events.edit = alloc(sizeof(*events.edit));
@@ -341,7 +333,6 @@ void connect_thread(connect_inst_s *conn)
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
                 pthread_mutex_unlock(&chptr->lock);
-                
                 
                 pthread_mutex_lock(&monitor.lock);
                 pthread_cond_signal(&monitor.cond);
@@ -429,6 +420,7 @@ void release_message(void)
 inline int netgetc(connect_inst_s *s)
 {
     if(s->uget) {
+        traffic_log(s->c);
         s->uget = false;
         return s->c;
     }
@@ -440,6 +432,8 @@ inline int netgetc(connect_inst_s *s)
         putchar(s->buf[s->i]);
     else
         puts("\n");
+    traffic_log(s->buf[s->i]);
+
     fflush(stdout);
     return s->buf[s->i++];
 }
@@ -463,6 +457,14 @@ void print_user(user_s *s)
            s->field6,
            s->mod_level
            );
+}
+
+void printstr_n(char *str, size_t size)
+{
+    size_t i;
+    
+    for(i = 0; i < size; i++)
+        putchar(str[i]);
 }
 
 inline bool is_namechar(int c)
@@ -492,6 +494,69 @@ void glist_add(edit_games_s *games, gamelist_s *node)
     else
         games->glist = node;
     games->tail = node;
+}
+
+user_s *parse_uname(connect_inst_s *conn)
+{
+    char *lex;
+    user_s *u;
+    int diff, c, i = 0;
+    
+  //  timestamp = time(NULL);
+    
+    u = alloc(sizeof(*u));
+    
+    lex = u->id;
+    *lex++ = netgetc(conn);
+    *lex++ = netgetc(conn);
+    *lex++ = netgetc(conn);
+    *lex = '\0';
+    
+    while((c = netgetc(conn)) == '#')
+        i++;
+    diff = MAX_UNAME_PASS-i-1;
+    
+    lex = u->name;
+    *lex++ = c;
+    for(i = 0; i < diff; i++)
+        *lex++ = netgetc(conn);
+    *lex = '\0';
+    
+    lex = u->field1;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    lex = u->field2;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    lex = u->field3;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    lex = u->field4;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    lex = u->field5;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    lex = u->field6;
+    while((c = netgetc(conn)) != ';')
+        *lex++ = c;
+    *lex = '\0';
+    
+    printf("Adding: %s\n", u->name);
+    
+    u->mod_level = netgetc(conn);
+    
+    return u;
 }
 
 
@@ -551,15 +616,31 @@ void send_pmessage(connect_inst_s *conn, const char *message, const char *id)
         printf("message too long");
         return;
     }
+    printf("Sending to id: %s\n", id);
     buf[0] = '0';
     buf[1] = '0';
     buf[2] = id[0];
     buf[3] = id[1];
     buf[4] = id[2];
     buf[5] = 'P';
-
     strcpy(&buf[6], message);
     send(conn->sock, buf, strlen(buf)+1, 0);
+}
+
+void pm_broadcast(connect_inst_s *conn, const char *message)
+{
+    char buf[256];
+    
+    if(strlen(message) > 249) {
+        printf("message too long");
+        return;
+    }
+    buf[0] = '0';
+    buf[1] = '0';
+    buf[2] = 'P';
+    strcpy(&buf[3], message);
+    send(conn->sock, buf, strlen(buf)+1, 0);
+
 }
 
 connect_inst_s *get_connectinst(char *uname)
@@ -570,6 +651,11 @@ connect_inst_s *get_connectinst(char *uname)
         
     }
     return NULL;
+}
+
+inline void traffic_log(int c)
+{
+    fputc(c, traf_log);
 }
 
 void adduser(user_s *u)
@@ -613,6 +699,8 @@ user_s *userlookup(char *uid)
             return rec->user;
         rec = rec->next;
     }
+    puts("ERROR");
+    printf("Tried to look up %s\n\n", uid);
     return NULL;
 }
 
@@ -629,7 +717,7 @@ void deleteuser(char *uid)
                 last->next = rec->next;
             }
             else {
-                sanet_users.table[index] = NULL;
+                sanet_users.table[index] = rec->next;
             }
             free(rec);
             return;

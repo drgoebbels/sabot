@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <assert.h>
+
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QTableWidget>
@@ -34,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
     monitor = new MonitorThread((Ui::MainWindow *)this);
 
     connect(ui->messageBox, SIGNAL(returnPressed()), this, SLOT(sendMessage()));
+    connect(ui->pmBroadcast, SIGNAL(clicked()), this, SLOT(sendBroadcast()));
     connect(ui->addLogin, SIGNAL(clicked()), this, SLOT(loginButtonClicked()));
     connect(monitor, SIGNAL(messageReceived(message_s *)), this, SLOT(postRemoteMessage(message_s *)));
     connect(monitor, SIGNAL(updateUserList(edit_users_s *)), this, SLOT(editUsers(edit_users_s *)));
@@ -50,12 +53,21 @@ void MainWindow::sendMessage()
     if(ui->privateMessage->isChecked()) {
         QTableWidget *userList = ui->tab->findChild<QTableWidget *>("userTable");
         QTableWidgetItem *item = userList->item(userList->currentRow(), 1);
-        std::string temp2 = ui->messageBox->text().toStdString();
-        send_pmessage(conncurr, str, temp2.c_str());
+        send_pmessage(conncurr, str, item->text().toStdString().c_str());
     }
     else {
         send_message(conncurr, str);
     }
+    ui->messageBox->clear();
+}
+
+void MainWindow::sendBroadcast()
+{
+    std::string temp1 = ui->messageBox->text().toStdString();
+    const char *str = temp1.c_str();
+
+    pm_broadcast(conncurr, str);
+
     ui->messageBox->clear();
 }
 
@@ -68,16 +80,24 @@ void MainWindow::postRemoteMessage(message_s *msg)
 
     if(msg->type == 'P') {
         message.append(" [private] ");
+        putchar('\a');
     }
-    if(sender->mod_level == '0') {
-        message.append("<");
-        message.append(sender->name);
-        message.append("> ");
+    if(msg->type == '9' || msg->type == 'P'){
+        if(sender->mod_level == '0') {
+            message.append("<");
+            message.append(sender->name);
+            message.append("> ");
+        }
+        else {
+            message.append("<<");
+            message.append(sender->name);
+            message.append(">> ");
+        }
     }
     else {
-        message.append("<<");
+        message.append("<~");
         message.append(sender->name);
-        message.append(">> ");
+        message.append("~>");
     }
     message.append(msg->text);
     chatList->addItem(message.c_str());
@@ -115,18 +135,17 @@ void MainWindow::editUsers(edit_users_s *edit)
     std::string user(u->name);
     std::string id(u->id);
 
+    if(u->mod_level > '0')
+        id.append("     M");
     if(edit->add) {
         int c = userList->rowCount();
-        if(u->mod_level > '0')
-            id.append("     M");
         userList->insertRow(c);
         userList->setItem(c, 0, new QTableWidgetItem(QString::fromStdString(user)));
-        userList->setItem(c, 1, new QTableWidgetItem(u->id));
+        userList->setItem(c, 1, new QTableWidgetItem(QString::fromStdString(id)));
         userList->setColumnWidth(1, 50);
     }
     else {
         QList<QTableWidgetItem *> item = userList->findItems(QString::fromStdString(id), Qt::MatchExactly);
-
         userList->removeRow(item.first()->row());
     }
 }

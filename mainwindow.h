@@ -42,6 +42,7 @@ public:
 
 public slots:
     void sendMessage();
+    void sendBroadcast();
     void postRemoteMessage(message_s *conn);
     void loginButtonClicked();
     void loginAccept();
