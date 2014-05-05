@@ -178,9 +178,9 @@ extern connect_inst_s *connlist;
 extern connect_inst_s *conncurr;
 
 extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
-extern void send_message(connect_inst_s *conn, const char *message);
+extern void send_message(connect_inst_s *conn, const char *message, const char *prefix);
 extern void send_pmessage(connect_inst_s *conn, const char *message, const char *id);
-extern void pm_broadcast(connect_inst_s *conn, const char *message);
+
 extern void wait_message(void);
 extern void release_message(void);
 extern connect_inst_s *get_connectinst(char *uname);

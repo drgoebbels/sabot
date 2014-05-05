@@ -48,6 +48,7 @@ public slots:
     void loginAccept();
     void editUsers(edit_users_s *);
     void editGamesSlot(edit_games_s *);
+    void openDebugLogSlot();
 
 signals:
 

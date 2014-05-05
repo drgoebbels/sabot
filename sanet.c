@@ -15,6 +15,8 @@
     #define	traffic_log(a) ((void)0)
 #endif
 
+//#define DEBUG_SIMULA
+
 #define SLEEP_TIME 20
 #define LOGIN_FLAG "09"
 
@@ -60,7 +62,7 @@ static char finish_login[] = {
     0x30, 0x33, 0x5f, 0x00
 };
 
-static int socket_(const char *server);
+static int connect_(const char *server);
 static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
@@ -79,12 +81,20 @@ static inline void traffic_log(int c);
 
 static uint16_t uid_hash(char *uid);
 
-int socket_(const char *server)
+int connect_(const char *server)
 {
     int sock;
     static struct sockaddr_in sockin;
     static int res;
     
+#ifdef DEBUG_SIMULA
+    traf_log = fopen(server, "r");
+    if(!traf_log) {
+        perror("Error Opening File");
+        exit(EXIT_FAILURE);
+    }
+    return fileno(traf_log);
+#else
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < -1) {
         perror("cannot create socket");
@@ -92,7 +102,13 @@ int socket_(const char *server)
     }
     
     memset(&sockin, 0, sizeof(sockin));
-    
+
+    puts("code:");
+    int i = 0;
+    for(; i < sizeof(init_send); i++)
+        putchar(init_send[i]);
+
+    putchar('\n');
     sockin.sin_family = AF_INET;
     sockin.sin_port = htons(PORT);
     res = inet_pton(AF_INET, server, &sockin.sin_addr);
@@ -114,6 +130,7 @@ int socket_(const char *server)
         exit(EXIT_FAILURE);
     }
     return sock;
+#endif
 }
 
 connect_inst_s *login(const char *server, const char *uname, const char *pass)
@@ -142,7 +159,7 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     }
 #endif
     
-    sock = socket_(server);
+    sock = connect_(server);
 
     conn = alloc(sizeof(*conn));
     conn->server = server;
@@ -162,7 +179,6 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     sprintf(buf, LOGIN_FLAG "%s;%s", uname, pass);
     send(sock, buf, strlen(buf)+1, 0);
     
-    //recv(sock, buf, sizeof(buf), 0);
     c = netgetc(conn);
     if(c == 'A') {
         self = parse_uname(conn);
@@ -425,8 +441,12 @@ inline int netgetc(connect_inst_s *s)
         return s->c;
     }
     if(s->i == s->len) {
-        s->len = recv(s->sock, s->buf, sizeof(s->buf), 0);
+        s->len = read(s->sock, s->buf, sizeof(s->buf));
         s->i = 0;
+        if(s->len <= 0) {
+            perror("Hit EOF or Lost Connection");
+            exit(0);
+        }
     }
     if(s->buf[s->i])
         putchar(s->buf[s->i]);
@@ -595,52 +615,43 @@ chat_event_s *event_dequeue(connect_inst_s *conn)
     return next;
 }
 
-void send_message(connect_inst_s *conn, const char *message)
+void send_message(connect_inst_s *conn, const char *message, const char *prefix)
 {
+    size_t mlen = strlen(message),
+           plen = strlen(prefix);
     char buf[256];
-    
-    if(strlen(message) > 254) {
-        printf("message too long");
-        return;
+
+    if(mlen + plen >= 256)
+        perror("message to long");
+    else {
+        strcpy(buf, prefix);
+        strcat(buf, message);
+        send(conn->sock, buf, strlen(buf)+1, 0);
     }
-    buf[0] = '9';
-    strcpy(&buf[1], message);
-    send(conn->sock, buf, strlen(buf)+1, 0);
 }
 
 void send_pmessage(connect_inst_s *conn, const char *message, const char *id)
 {
     char buf[256];
+    char prefix[7];
 
     if(strlen(message) > 249) {
         printf("message too long");
         return;
     }
-    printf("Sending to id: %s\n", id);
-    buf[0] = '0';
-    buf[1] = '0';
-    buf[2] = id[0];
-    buf[3] = id[1];
-    buf[4] = id[2];
-    buf[5] = 'P';
-    strcpy(&buf[6], message);
-    send(conn->sock, buf, strlen(buf)+1, 0);
+    prefix[0] = '0';
+    prefix[1] = '0';
+    prefix[2] = id[0];
+    prefix[3] = id[1];
+    prefix[4] = id[2];
+    prefix[5] = 'P';
+    prefix[6] = '\0';
+    send_message(conn, message, prefix);
 }
 
 void pm_broadcast(connect_inst_s *conn, const char *message)
 {
-    char buf[256];
-    
-    if(strlen(message) > 249) {
-        printf("message too long");
-        return;
-    }
-    buf[0] = '0';
-    buf[1] = '0';
-    buf[2] = 'P';
-    strcpy(&buf[3], message);
-    send(conn->sock, buf, strlen(buf)+1, 0);
-
+    send_message(conn, message, "P");
 }
 
 connect_inst_s *get_connectinst(char *uname)

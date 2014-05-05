@@ -7,6 +7,7 @@
 #include <QListWidgetItem>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QFileDialog>
 
 /*
  * Not Where I wanted to place this, but so far this is
@@ -42,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(monitor, SIGNAL(updateUserList(edit_users_s *)), this, SLOT(editUsers(edit_users_s *)));
     connect(monitor, SIGNAL(editGames(edit_games_s*)), this, SLOT(editGamesSlot(edit_games_s*)));
 
+    connect(ui->actionOpen_Debug_Log, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
     monitor->start();
 }
 
@@ -56,7 +58,7 @@ void MainWindow::sendMessage()
         send_pmessage(conncurr, str, item->text().toStdString().c_str());
     }
     else {
-        send_message(conncurr, str);
+        send_message(conncurr, str, ui->messageType->text().toStdString().c_str());
     }
     ui->messageBox->clear();
 }
@@ -66,7 +68,7 @@ void MainWindow::sendBroadcast()
     std::string temp1 = ui->messageBox->text().toStdString();
     const char *str = temp1.c_str();
 
-    pm_broadcast(conncurr, str);
+  //  pm_broadcast(conncurr, str);
 
     ui->messageBox->clear();
 }
@@ -164,6 +166,12 @@ void MainWindow::editGamesSlot(edit_games_s *game)
     free(game);
 }
 
+void MainWindow::openDebugLogSlot()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), "", tr("Files (*.*)"));
+    //filename.
+}
+
 void MainWindow::loginButtonClicked()
 {
     if(!lp) {
@@ -194,16 +202,6 @@ void MonitorThread::run()
         conn = connlist;
         while(conn) {
             msg_lock(conn);
-            /*if(conn->chat.tail && !conn->chat.tail->is_consumed) {
-                conn->chat.tail->is_consumed = true;
-            }
-            if(conn->uqueue.head) {
-                while((node = udequeue(conn))) {
-                    emit updateUserList(node->uptr, node->add);
-                    free(node);
-                }
-                conn->uqueue.head = NULL;
-            }*/
 
             while((event = event_dequeue(conn))) {
                 switch(event->type) {

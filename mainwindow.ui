@@ -10,8 +10,16 @@
     <height>696</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <stylestrategy>PreferDefault</stylestrategy>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="documentMode">
+   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QLineEdit" name="messageBox">
@@ -177,8 +185,14 @@
       <property name="defaultDropAction">
        <enum>Qt::IgnoreAction</enum>
       </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
       <property name="verticalScrollMode">
        <enum>QAbstractItemView::ScrollPerItem</enum>
+      </property>
+      <property name="isWrapping" stdset="0">
+       <bool>false</bool>
       </property>
       <property name="layoutMode">
        <enum>QListView::SinglePass</enum>
@@ -282,6 +296,22 @@
      <string>pm broadcast</string>
     </property>
    </widget>
+   <widget class="QLineEdit" name="messageType">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>620</y>
+      <width>191</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>9</string>
+    </property>
+    <property name="maxLength">
+     <number>100</number>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -297,6 +327,7 @@
      <string>File</string>
     </property>
     <addaction name="separator"/>
+    <addaction name="actionOpen_Debug_Log"/>
     <addaction name="actionSave_Logs"/>
     <addaction name="actionQuit_Sabot"/>
    </widget>
@@ -331,6 +362,11 @@
   <action name="actionChange_Perspective">
    <property name="text">
     <string>Change Perspective</string>
+   </property>
+  </action>
+  <action name="actionOpen_Debug_Log">
+   <property name="text">
+    <string>Open Debug Log</string>
    </property>
   </action>
  </widget>
