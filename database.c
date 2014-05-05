@@ -1,12 +1,12 @@
-#include <sqlite3.h>
-#include <unistd.h>
-#include <termios.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
+
+#include <sqlite3.h>
+#include <unistd.h>
+#include <termios.h>
 
 #include "crypt.h"
 #include "database.h"
@@ -15,7 +15,23 @@
 
 #define MAX_UNAME 20
 
+static sqlite3 *db_handle;
+
 static size_t getpassword(char *buf, size_t max);
+
+void db_init(const char *name)
+{
+    int status;
+
+    status = sqlite3_open_v2(
+                name,
+                &db_handle,
+                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+                SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_PRIVATECACHE,
+                NULL);
+    if(status != SQLITE_OK)
+        perror("Error Opening Database");
+}
 
 void store_account(void)
 {

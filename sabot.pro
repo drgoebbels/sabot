@@ -30,3 +30,5 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     loginprompt.ui
+
+LIBS += -lsqlite3

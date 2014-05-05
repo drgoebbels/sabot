@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+extern void db_init(const char *name);
+
 extern void store_account(void);
 extern void authenticate(void);
 
