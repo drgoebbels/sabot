@@ -100,8 +100,6 @@ struct edit_games_s
 
 struct connect_inst_s
 {
-    int c;
-    bool uget;
     const char *server;
     const char *uname;
     int sock;

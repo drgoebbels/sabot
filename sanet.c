@@ -10,6 +10,7 @@
 
 #include "general.h"
 #include "sanet.h"
+#include "database.h"
 
 #ifdef NDEBUG
     #define	traffic_log(a) ((void)0)
@@ -67,8 +68,7 @@ static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
 
-static inline int netgetc(connect_inst_s *conn);
-static inline void netpushback(connect_inst_s *conn, int c);
+static int netgetc(connect_inst_s *conn);
 static inline char *nexttoken(connect_inst_s *conn);
 static inline bool is_namechar(int c);
 static inline bool is_gamenamechar(int c);
@@ -169,7 +169,6 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->next = NULL;
     conn->i = 0;
     conn->len = 0;
-    conn->uget = false;
     conn->uqueue.head = NULL;
     pthread_mutex_init(&conn->chat.lock, NULL);
     
@@ -433,13 +432,8 @@ void release_message(void)
     pthread_mutex_unlock(&monitor.lock);
 }
 
-inline int netgetc(connect_inst_s *s)
+int netgetc(connect_inst_s *s)
 {
-    if(s->uget) {
-        traffic_log(s->c);
-        s->uget = false;
-        return s->c;
-    }
     if(s->i == s->len) {
         s->len = read(s->sock, s->buf, sizeof(s->buf));
         s->i = 0;
@@ -456,12 +450,6 @@ inline int netgetc(connect_inst_s *s)
 
     fflush(stdout);
     return s->buf[s->i++];
-}
-
-inline void netpushback(connect_inst_s *conn, int c)
-{
-    conn->c = c;
-    conn->uget = true;
 }
 
 void print_user(user_s *s)
