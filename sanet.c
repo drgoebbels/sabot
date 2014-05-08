@@ -262,9 +262,9 @@ void connect_thread(connect_inst_s *conn)
                         while(!(c = netgetc(conn)));
                         if(c == '0' && netgetc(conn) == ';') {
                             c = netgetc(conn);
+                            events.game = alloc(sizeof(*events.game));
+                            events.game->glist = NULL;
                             while(c) {
-                                events.game = alloc(sizeof(*events.game));
-                                events.game->glist = NULL;
                                 timestamp = time(NULL);
                                 node = alloc(sizeof(*node));
                                 lex = node->name;
@@ -275,23 +275,21 @@ void connect_thread(connect_inst_s *conn)
                                     *--lex = '\0';
                                     node->next = NULL;
                                     glist_add(events.game, node);
-                                    events.game->base.timestamp = timestamp;
-                                    events.game->base.user = NULL;
-                                    events.game->base.type = EVENT_EDIT_GAMES;
-                                    pthread_mutex_lock(&conn->chat.lock);
-
-                                    event_enqueue(conn, events.event);
-
-                                    pthread_mutex_unlock(&conn->chat.lock);
-                                    pthread_mutex_lock(&monitor.lock);
-                                    pthread_cond_signal(&monitor.cond);
-                                    pthread_mutex_unlock(&monitor.lock);
                                 }
                                 else {
                                     free(node);
                                 }
                                 c = netgetc(conn);
                             }
+                            events.game->base.timestamp = timestamp;
+                            events.game->base.user = NULL;
+                            events.game->base.type = EVENT_EDIT_GAMES;
+                            pthread_mutex_lock(&conn->chat.lock);
+                            event_enqueue(conn, events.event);
+                            pthread_mutex_unlock(&conn->chat.lock);
+                            pthread_mutex_lock(&monitor.lock);
+                            pthread_cond_signal(&monitor.cond);
+                            pthread_mutex_unlock(&monitor.lock);
                         }
                     }
                 }
