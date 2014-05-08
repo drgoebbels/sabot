@@ -3,7 +3,7 @@ ATTACH DATABASE 'sabot.db' AS 'sabot';
 DROP TABLE IF EXISTS sabot.user;
 CREATE TABLE sabot.user(
   id INTEGER NOT NULL, 
-  name VARCHAR(32) NOT NULL,
+  name VARCHAR(32) UNIQUE NOT NULL,
   password VARCHAR(20),
   PRIMARY KEY(id)
 );
@@ -73,5 +73,18 @@ CREATE TABLE aes_key(
   key BLOB, 
   PRIMARY KEY(id)
 );
+
+INSERT INTO sabot.server(ip, name) VALUES("74.86.43.9", "2 Dimensional Central");
+INSERT INTO sabot.server(ip, name) VALUES("74.86.43.8", "Paper Thin City");
+INSERT INTO sabot.server(ip, name) VALUES("67.19.138.234", "Fine Line");
+INSERT INTO sabot.server(ip, name) VALUES("67.19.138.236", "U Of SA");
+INSERT INTO sabot.server(ip, name) VALUES("74.86.3.220", "Flat World");
+INSERT INTO sabot.server(ip, name) VALUES("67.19.138.235", "Planar Outpost");
+INSERT INTO sabot.server(ip, name) VALUES("74.86.3.221", "Mobius Metropolis");
+INSERT INTO sabot.server(ip, name) VALUES("94.75.214.10", "EU Amsterdam");
+INSERT INTO sabot.server(ip, name) VALUES("74.86.3.222", "Compatibility (Sticktopia)");
+INSERT INTO sabot.server(ip, name) VALUES("74.86.43.10", "SS Lineage");
+
+
 
 

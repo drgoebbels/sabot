@@ -197,6 +197,9 @@
       <property name="layoutMode">
        <enum>QListView::SinglePass</enum>
       </property>
+      <property name="modelColumn">
+       <number>0</number>
+      </property>
       <property name="wordWrap">
        <bool>true</bool>
       </property>

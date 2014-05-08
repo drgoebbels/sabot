@@ -22,6 +22,8 @@ static size_t getpassword(char *buf, size_t max);
 void db_init(const char *name)
 {
     int status;
+    const char *zSql =  "INSERT OR IGNORE INTO user(name) VALUES(?);";
+                        //"INSERT INTO "
 
     status = sqlite3_open_v2(
                 name,
@@ -31,6 +33,9 @@ void db_init(const char *name)
                 NULL);
     if(status != SQLITE_OK)
         perror("Error Opening Database");
+    else {
+
+    }
 }
 
 void store_account(void)
