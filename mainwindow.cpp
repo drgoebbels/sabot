@@ -8,6 +8,7 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QFileDialog>
+#include <QWheelEvent>
 
 /*
  * Not Where I wanted to place this, but so far this is
@@ -42,8 +43,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(monitor, SIGNAL(messageReceived(message_s *)), this, SLOT(postRemoteMessage(message_s *)));
     connect(monitor, SIGNAL(updateUserList(edit_users_s *)), this, SLOT(editUsers(edit_users_s *)));
     connect(monitor, SIGNAL(editGames(edit_games_s*)), this, SLOT(editGamesSlot(edit_games_s*)));
-
-    connect(ui->actionOpen_Debug_Log, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
+    connect(ui->chatList, SIGNAL(wheelEvent(QWheelEvent *)), this, SLOT(scrollControl(QWheelEvent *)));
+   // connect(ui->serverTabs->chi, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
     monitor->start();
 }
 
@@ -138,7 +139,7 @@ void MainWindow::editUsers(edit_users_s *edit)
     std::string id(u->id);
 
     if(u->mod_level > '0')
-        id.append("     M");
+        id.append("    --M--");
     if(edit->add) {
         int c = userList->rowCount();
         userList->insertRow(c);
@@ -181,6 +182,14 @@ void MainWindow::loginButtonClicked()
     lp->show();
     lp->raise();
     lp->activateWindow();
+}
+
+
+
+void MainWindow::scrollControl(QWheelEvent *e)
+{
+    printf("delta %d\n", e->delta());
+    fflush(stdout);
 }
 
 MonitorThread::MonitorThread(Ui::MainWindow *parent)

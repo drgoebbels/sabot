@@ -49,6 +49,7 @@ public slots:
     void editUsers(edit_users_s *);
     void editGamesSlot(edit_games_s *);
     void openDebugLogSlot();
+    void scrollControl(QWheelEvent *);
 
 signals:
 

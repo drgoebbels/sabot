@@ -23,7 +23,7 @@ void db_init(const char *name)
 {
     int status;
     const char *zSql =  "INSERT OR IGNORE INTO user(name) VALUES(?);";
-                        //"INSERT INTO "
+                      //  "INSERT INTO login "
 
     status = sqlite3_open_v2(
                 name,

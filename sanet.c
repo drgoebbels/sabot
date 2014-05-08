@@ -284,9 +284,13 @@ void connect_thread(connect_inst_s *conn)
                             events.game->base.timestamp = timestamp;
                             events.game->base.user = NULL;
                             events.game->base.type = EVENT_EDIT_GAMES;
+
+                            /* game list to event queue */
                             pthread_mutex_lock(&conn->chat.lock);
                             event_enqueue(conn, events.event);
                             pthread_mutex_unlock(&conn->chat.lock);
+
+                            /* signal monitor thread to update game list in Qt */
                             pthread_mutex_lock(&monitor.lock);
                             pthread_cond_signal(&monitor.cond);
                             pthread_mutex_unlock(&monitor.lock);
