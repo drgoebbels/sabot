@@ -158,8 +158,8 @@ void MainWindow::editGamesSlot(edit_games_s *game)
     QListWidget *gameList = ui->tab->findChild<QListWidget *>("gameList");
 
     gameList->clear();
-    for(g = game->glist; g; g = bg) {
-        gameList->addItem(g->name);
+    for(bg = g = game->glist; bg; g = bg) {
+        gameList->addItem(strdup(g->name));
         bg = g->next;
         free(g);
     }
@@ -217,7 +217,6 @@ void MonitorThread::run()
                     default:
                         break;
                 }
-
             }
 
             backup = conn;

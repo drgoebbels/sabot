@@ -259,12 +259,12 @@ void connect_thread(connect_inst_s *conn)
                 if(c == '1') {
                     c = netgetc(conn);
                     if(c == '_') {
-                        c = netgetc(conn);
+                        while(!(c = netgetc(conn)));
                         if(c == '0' && netgetc(conn) == ';') {
                             c = netgetc(conn);
-                            events.game = alloc(sizeof(*events.game));
-                            events.game->glist = NULL;
                             while(c) {
+                                events.game = alloc(sizeof(*events.game));
+                                events.game->glist = NULL;
                                 timestamp = time(NULL);
                                 node = alloc(sizeof(*node));
                                 lex = node->name;
@@ -279,8 +279,13 @@ void connect_thread(connect_inst_s *conn)
                                     events.game->base.user = NULL;
                                     events.game->base.type = EVENT_EDIT_GAMES;
                                     pthread_mutex_lock(&conn->chat.lock);
+
                                     event_enqueue(conn, events.event);
+
                                     pthread_mutex_unlock(&conn->chat.lock);
+                                    pthread_mutex_lock(&monitor.lock);
+                                    pthread_cond_signal(&monitor.cond);
+                                    pthread_mutex_unlock(&monitor.lock);
                                 }
                                 else {
                                     free(node);
@@ -559,9 +564,7 @@ user_s *parse_uname(connect_inst_s *conn)
     while((c = netgetc(conn)) != ';')
         *lex++ = c;
     *lex = '\0';
-    
-    printf("Adding: %s\n", u->name);
-    
+        
     u->mod_level = netgetc(conn);
     
     return u;
