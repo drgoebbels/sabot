@@ -6,17 +6,6 @@ CREATE TABLE sabot.user(
   name VARCHAR(32) UNIQUE NOT NULL,
   password VARCHAR(20),
   PRIMARY KEY(id)
-);
-
-DROP TABLE IF EXISTS sabot.performance;
-CREATE TABLE sabot.performance(
-  id INTEGER NOT NULL, 
-  login INTEGER NOT NULL, 
-  kd_ratio REAL, 
-  kills INTEGER,
-  rounds_comp INTEGER,
-  rounds_compp REAL,
-  FOREIGN KEY(login) REFERENCES login(id)
 ); 
 
 DROP TABLE IF EXISTS sabot.login;
@@ -28,6 +17,10 @@ CREATE TABLE sabot.login(
   enter TIMESTAMP,
   exit TIMESTAMP,
   time_bounds TINYINT, /* would have preferred BIT(2)*/
+  kd_ratio REAL, 
+  kills INTEGER,
+  rounds_comp INTEGER,
+  rounds_compp REAL,
   FOREIGN KEY(server) REFERENCES server(id),
   FOREIGN KEY(user) REFERENCES user(id),
   PRIMARY KEY(id)

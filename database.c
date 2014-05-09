@@ -22,8 +22,13 @@ static size_t getpassword(char *buf, size_t max);
 void db_init(const char *name)
 {
     int status;
-    const char *zSql =  "INSERT OR IGNORE INTO user(name) VALUES(?);";
-                      //  "INSERT INTO login "
+
+
+
+    const char *zSql =  "SELECT id FROM user WHERE name=?;"
+                        "INSERT INTO user(name) VALUES(?);"
+                        "SELECT id FROM server WHERE ip=?"
+                        "INSERT INTO login(user, handle, server, enter, time_bounds) VALUES(?,?,?,?,?)";
 
     status = sqlite3_open_v2(
                 name,
@@ -36,6 +41,14 @@ void db_init(const char *name)
     else {
 
     }
+}
+
+void add_user_record(user_s *user, char *server, time_t enter)
+{
+    sqlite3_int64 id;
+
+    id = sqlite3_last_insert_rowid(db_handle);
+
 }
 
 void store_account(void)
