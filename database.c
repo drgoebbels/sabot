@@ -16,30 +16,47 @@
 #define MAX_UNAME 20
 
 static sqlite3 *db_handle;
+static sqlite3_stmt *sql_getid;
+static sqlite3_stmt *sql_insert_usr;
+static sqlite3_stmt *sql_getsid;
+static sqlite3_stmt *sql_insert_login;
 
 static size_t getpassword(char *buf, size_t max);
 
 void db_init(const char *name)
 {
     int status;
-
-
-
-    const char *zSql =  "SELECT id FROM user WHERE name=?;"
-                        "INSERT INTO user(name) VALUES(?);"
-                        "SELECT id FROM server WHERE ip=?"
-                        "INSERT INTO login(user, handle, server, enter, time_bounds) VALUES(?,?,?,?,?)";
+    static const char getid[] = "SELECT id FROM user WHERE name=?;";
+    static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
+    static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
+    static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
 
     status = sqlite3_open_v2(
                 name,
                 &db_handle,
-                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+                SQLITE_OPEN_READWRITE |
                 SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_PRIVATECACHE,
                 NULL);
-    if(status != SQLITE_OK)
-        perror("Error Opening Database");
+    if(status != SQLITE_OK) {
+        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+    }
     else {
-
+        status = sqlite3_prepare(db_handle, getid, sizeof(getid)-1, &sql_getid, NULL);
+        if(status != SQLITE_OK) {
+            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        }
+        status = sqlite3_prepare(db_handle, insert_usr, sizeof(insert_usr)-1, &sql_insert_usr, NULL);
+        if(status != SQLITE_OK) {
+            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        }
+        status = sqlite3_prepare(db_handle, getsid, sizeof(getsid)-1, &sql_getsid, NULL);
+        if(status != SQLITE_OK) {
+            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        }
+        status = sqlite3_prepare(db_handle, insert_login, sizeof(insert_login)-1, &sql_insert_login, NULL);
+        if(status != SQLITE_OK) {
+            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        }
     }
 }
 
@@ -47,7 +64,6 @@ void add_user_record(user_s *user, char *server, time_t enter)
 {
     sqlite3_int64 id;
 
-    id = sqlite3_last_insert_rowid(db_handle);
 
 }
 

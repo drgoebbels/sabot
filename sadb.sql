@@ -21,6 +21,7 @@ CREATE TABLE sabot.login(
   kills INTEGER,
   rounds_comp INTEGER,
   rounds_compp REAL,
+  color INTEGER,
   FOREIGN KEY(server) REFERENCES server(id),
   FOREIGN KEY(user) REFERENCES user(id),
   PRIMARY KEY(id)

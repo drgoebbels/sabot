@@ -7,6 +7,7 @@ extern "C" {
 
 #include <sys/time.h>
 #include <pthread.h>
+#include <stdint.h>
 
 #define PORT                1138
 
