@@ -41,19 +41,19 @@ void db_init(const char *name)
         fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
     }
     else {
-        status = sqlite3_prepare(db_handle, getid, sizeof(getid)-1, &sql_getid, NULL);
+        status = sqlite3_prepare_v2(db_handle, getid, sizeof(getid), &sql_getid, NULL);
         if(status != SQLITE_OK) {
             fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
         }
-        status = sqlite3_prepare(db_handle, insert_usr, sizeof(insert_usr)-1, &sql_insert_usr, NULL);
+        status = sqlite3_prepare_v2(db_handle, insert_usr, sizeof(insert_usr), &sql_insert_usr, NULL);
         if(status != SQLITE_OK) {
             fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
         }
-        status = sqlite3_prepare(db_handle, getsid, sizeof(getsid)-1, &sql_getsid, NULL);
+        status = sqlite3_prepare_v2(db_handle, getsid, sizeof(getsid), &sql_getsid, NULL);
         if(status != SQLITE_OK) {
             fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
         }
-        status = sqlite3_prepare(db_handle, insert_login, sizeof(insert_login)-1, &sql_insert_login, NULL);
+        status = sqlite3_prepare_v2(db_handle, insert_login, sizeof(insert_login), &sql_insert_login, NULL);
         if(status != SQLITE_OK) {
             fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
         }
@@ -62,9 +62,18 @@ void db_init(const char *name)
 
 void add_user_record(user_s *user, char *server, time_t enter)
 {
+    int status;
     sqlite3_int64 id;
+    size_t len = strlen(user->name);
 
+    status = sqlite3_bind_text(sql_getid, 1, user->name, len, SQLITE_STATIC);
+    if(status != SQLITE_OK)
+        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+    while(sqlite3_step(sql_getid) != SQLITE_DONE) {
 
+    }
+    sqlite3_reset(sql_getid);
+    sqlite3_clear_bindings(sql_getid);
 }
 
 void store_account(void)

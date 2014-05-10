@@ -312,6 +312,8 @@ void connect_thread(connect_inst_s *conn)
                 u = parse_uname(conn);
                 adduser(u);
                 
+                add_user_record(u, conn->server, time(NULL));
+
                 events.edit = alloc(sizeof(*events.edit));
                 events.edit->base.type = EVENT_EDIT_USERS;
                 events.edit->base.user = u;
