@@ -69,8 +69,17 @@ void add_user_record(user_s *user, char *server, time_t enter)
     status = sqlite3_bind_text(sql_getid, 1, user->name, len, SQLITE_STATIC);
     if(status != SQLITE_OK)
         fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-    while(sqlite3_step(sql_getid) != SQLITE_DONE) {
+    while((status = sqlite3_step(sql_getid)) != SQLITE_DONE) {
+        if(status == SQLITE_ROW) {
 
+        }
+        else if (status == SQLITE_ERROR) {
+            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            break;
+        }
+        else {
+            //...
+        }
     }
     sqlite3_reset(sql_getid);
     sqlite3_clear_bindings(sql_getid);
