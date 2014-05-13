@@ -100,6 +100,9 @@ void add_user_record(user_s *user, char *server, time_t enter)
                 //...
             }
         }
+        sqlite3_reset(sql_getid);
+        sqlite3_clear_bindings(sql_getid);
+
         if(id == -1) {
             status = sqlite3_bind_text(sql_insert_usr, 1, user->name, len, SQLITE_STATIC);
             if(status == SQLITE_OK) {
@@ -141,15 +144,14 @@ void add_user_record(user_s *user, char *server, time_t enter)
             if(status != SQLITE_DONE) {
                 fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
             }
-            sqlite3_reset(sql_insert_usr);
-            sqlite3_clear_bindings(sql_insert_usr);
+            sqlite3_reset(sql_insert_login);
+            sqlite3_clear_bindings(sql_insert_login);
         }
         else {
             perror("Database Error reading server primary key");
         }
         sqlite3_reset(sql_getsid);
         sqlite3_clear_bindings(sql_getsid);
-
     }
     else {
         fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
