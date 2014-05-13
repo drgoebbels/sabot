@@ -14,6 +14,8 @@ extern void add_user_record(user_s *user, char *server, time_t enter);
 extern void store_account(void);
 extern void authenticate(void);
 
+extern inline void db_clean(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 #include <assert.h>
 
 #include "general.h"
@@ -81,6 +82,19 @@ static void printstr_n(char *str, size_t size);
 static inline void traffic_log(int c);
 
 static uint16_t uid_hash(char *uid);
+
+void sanet_init(void)
+{
+    /*
+    sa.sa_handler = sigUSR1;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset(&sa.sa_mask);
+    status = sigaction(SIGUSR1, &sa, NULL);
+    if(status < 0) {
+        perror("Error installing handler for SIGUSR1");
+        exit(EXIT_FAILURE);
+    }*/
+}
 
 bool check_login(const char *server, const char *uname, const char *pass)
 {

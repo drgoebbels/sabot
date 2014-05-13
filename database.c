@@ -73,6 +73,7 @@ void db_init(const char *name)
                 fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
             }
         }
+        atexit(db_clean);
     }
 }
 
@@ -272,4 +273,10 @@ void authenticate(void)
     else {
         puts("Fail! ,,|,,");
     }
+}
+
+inline void db_clean(void)
+{
+    sem_unlink("sadb_mutex");
+    sqlite3_close(db_handle);
 }
