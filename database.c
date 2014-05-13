@@ -8,6 +8,11 @@
 #include <unistd.h>
 #include <termios.h>
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 #include "crypt.h"
 #include "database.h"
 
@@ -21,41 +26,52 @@ static sqlite3_stmt *sql_insert_usr;
 static sqlite3_stmt *sql_getsid;
 static sqlite3_stmt *sql_insert_login;
 
+static sem_t *sql_db_lock;
+
 static size_t getpassword(char *buf, size_t max);
 
 void db_init(const char *name)
 {
     int status;
+
     static const char getid[] = "SELECT id FROM user WHERE name=?;";
     static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
 
-    status = sqlite3_open_v2(
-                name,
-                &db_handle,
-                SQLITE_OPEN_READWRITE |
-                SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_PRIVATECACHE,
-                NULL);
-    if(status != SQLITE_OK) {
-        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-    }
-    else {
-        status = sqlite3_prepare_v2(db_handle, getid, sizeof(getid), &sql_getid, NULL);
+    if(!db_handle) {
+        status = sqlite3_open_v2(
+                    name,
+                    &db_handle,
+                    SQLITE_OPEN_READWRITE |
+                    SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_PRIVATECACHE,
+                    NULL);
         if(status != SQLITE_OK) {
             fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
         }
-        status = sqlite3_prepare_v2(db_handle, insert_usr, sizeof(insert_usr), &sql_insert_usr, NULL);
-        if(status != SQLITE_OK) {
-            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-        }
-        status = sqlite3_prepare_v2(db_handle, getsid, sizeof(getsid), &sql_getsid, NULL);
-        if(status != SQLITE_OK) {
-            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-        }
-        status = sqlite3_prepare_v2(db_handle, insert_login, sizeof(insert_login), &sql_insert_login, NULL);
-        if(status != SQLITE_OK) {
-            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        else {
+            sql_db_lock = sem_open("sadb_mutex", O_CREAT, S_IRUSR | S_IWUSR, 1);
+            if(sql_db_lock == SEM_FAILED) {
+                perror("Failure to obtain db mutex.");
+                return;
+            }
+
+            status = sqlite3_prepare_v2(db_handle, getid, sizeof(getid), &sql_getid, NULL);
+            if(status != SQLITE_OK) {
+                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            }
+            status = sqlite3_prepare_v2(db_handle, insert_usr, sizeof(insert_usr), &sql_insert_usr, NULL);
+            if(status != SQLITE_OK) {
+                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            }
+            status = sqlite3_prepare_v2(db_handle, getsid, sizeof(getsid), &sql_getsid, NULL);
+            if(status != SQLITE_OK) {
+                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            }
+            status = sqlite3_prepare_v2(db_handle, insert_login, sizeof(insert_login), &sql_insert_login, NULL);
+            if(status != SQLITE_OK) {
+                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            }
         }
     }
 }
@@ -66,6 +82,7 @@ void add_user_record(user_s *user, char *server, time_t enter)
     int status, type, icol = 0;
     size_t len = strlen(user->name);
 
+    //sem_wait()
     status = sqlite3_bind_text(sql_getid, 1, user->name, len, SQLITE_STATIC);
     if(status == SQLITE_OK) {
         while((status = sqlite3_step(sql_getid)) != SQLITE_DONE) {
@@ -91,12 +108,13 @@ void add_user_record(user_s *user, char *server, time_t enter)
                     fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
                     return;
                 }
+                id = sqlite3_last_insert_rowid(db_handle);
                 sqlite3_reset(sql_insert_usr);
                 sqlite3_clear_bindings(sql_insert_usr);
             }
         }
         status = sqlite3_bind_text(sql_getsid, 1, server, strlen(server), SQLITE_STATIC);
-        if(status = SQLITE_OK) {
+        if(status == SQLITE_OK) {
             icol = 0;
             while((status = sqlite3_step(sql_getsid)) != SQLITE_DONE) {
                 if(status == SQLITE_ROW) {
@@ -109,6 +127,7 @@ void add_user_record(user_s *user, char *server, time_t enter)
                     fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
                 }
                 else {
+                    //printf("type: %d\n",)
                     //...
                 }
             }
@@ -159,7 +178,7 @@ void store_account(void)
         perror("Error Reading Username");
         exit(EXIT_FAILURE);
     }
-    
+
     puts("Enter password");
     len = getpassword(pass, MAX_UNAME);
     

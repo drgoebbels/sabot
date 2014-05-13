@@ -63,6 +63,7 @@ static char finish_login[] = {
     0x30, 0x33, 0x5f, 0x00
 };
 
+static bool check_login(const char *server, const char *uname, const char *pass);
 static int connect_(const char *server);
 static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
@@ -80,6 +81,11 @@ static void printstr_n(char *str, size_t size);
 static inline void traffic_log(int c);
 
 static uint16_t uid_hash(char *uid);
+
+bool check_login(const char *server, const char *uname, const char *pass)
+{
+    return false;
+}
 
 int connect_(const char *server)
 {
@@ -348,6 +354,10 @@ void connect_thread(connect_inst_s *conn)
                 /* get type of message */
                 events.message->type = netgetc(conn);
                 
+                if(events.message->type == 'P') {
+                    //send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
+                }
+
                 /* get message content */
                 lex = events.message->text;
                 while((*lex++ = netgetc(conn)));
