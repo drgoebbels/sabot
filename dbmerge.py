@@ -1,4 +1,5 @@
 #Script for merging sabot databases 
+#For now, this only merges the user table
 
 import os
 import sys
@@ -10,6 +11,10 @@ def mergeDB(dbName):
         if os.path.isfile(dbName):
             dbCon = sqlite3.connect(dbName)
             db = dbCon.cursor()
+
+            db.execute('SELECT * from user')
+            for row in db:
+                
         else:
             sys.stderr.write('Database %s does not exist\n' % dbName)
     except:
@@ -20,6 +25,7 @@ def mergeDB(dbName):
 
 if len(sys.argv) < 2:
     sys.stderr.write('No database specified to merge\n')
+    sys.exit(1)
 else:
     sadbCon = None
     try:
