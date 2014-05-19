@@ -12,9 +12,13 @@ def mergeDB(dbName):
             dbCon = sqlite3.connect(dbName)
             db = dbCon.cursor()
 
-            db.execute('SELECT * from user')
+            db.execute('SELECT name,password FROM user')
             for row in db:
-                
+                sadb.execute('SELECT id FROM user WHERE name=\'%s\'' % row[0])
+                data = sadb.fetchone()
+                if data is None:
+                    sadb.execute('INSERT INTO user(name,password) VALUES(?,?)', row)             
+            sadbCon.commit()
         else:
             sys.stderr.write('Database %s does not exist\n' % dbName)
     except:
@@ -34,6 +38,7 @@ else:
             sadb = sadbCon.cursor()
         
             for arg in sys.argv[1:]:
+                print 'merging: %s\n' % arg
                 mergeDB(arg)
         else:
             sys.stderr.write('Failed to access Database sabot.db\n')
