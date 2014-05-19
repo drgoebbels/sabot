@@ -178,6 +178,7 @@ extern connect_inst_s *conncurr;
 
 extern void sanet_init(void);
 extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
+extern connect_inst_s *quickstart(const char *server);
 extern void send_message(connect_inst_s *conn, const char *message, const char *prefix);
 extern void send_pmessage(connect_inst_s *conn, const char *message, const char *id);
 

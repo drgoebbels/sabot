@@ -8,6 +8,8 @@ CREATE TABLE sabot.user(
   PRIMARY KEY(id)
 ); 
 
+CREATE INDEX username_index ON sabot.user(name);
+
 DROP TABLE IF EXISTS sabot.login;
 CREATE TABLE sabot.login(
   id INTEGER NOT NULL, 
@@ -52,11 +54,12 @@ DROP TABLE IF EXISTS sabot.message;
 CREATE TABLE sabot.message(
   id INTEGER NOT NULL, 
   message TEXT, 
+  type TINYINT,
   message_to INTEGER, 
   message_from INTEGER, 
   flag TINYINT DEFAULT 0, 
-  FOREIGN KEY(message_to) REFERENCES user(id),
-  FOREIGN KEY(message_from) REFERENCES user(id), 
+  FOREIGN KEY(message_to) REFERENCES login(id),
+  FOREIGN KEY(message_from) REFERENCES login(id), 
   PRIMARY KEY(id)
 );
 

@@ -237,6 +237,13 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     return conn;
 }
 
+connect_inst_s *quickstart(const char *server)
+{
+    //send(sock, init_send, sizeof(init_send), 0);
+    //recv(sock, buf, sizeof(buf), 0);
+
+}
+
 /*
  * <uname> := U<id>#*[a-zA-Z_.,]+;[\d]+;[\d]+;[\d]+;[\d]+[\d]+;0
  * <id> := \d\d\d

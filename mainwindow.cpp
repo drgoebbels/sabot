@@ -184,8 +184,6 @@ void MainWindow::loginButtonClicked()
     lp->activateWindow();
 }
 
-
-
 void MainWindow::scrollControl(QWheelEvent *e)
 {
     printf("delta %d\n", e->delta());

@@ -324,6 +324,19 @@
      <number>100</number>
     </property>
    </widget>
+   <widget class="QPushButton" name="quickstart">
+    <property name="geometry">
+     <rect>
+      <x>740</x>
+      <y>600</y>
+      <width>121</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>quicskstart</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">

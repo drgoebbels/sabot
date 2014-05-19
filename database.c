@@ -38,6 +38,7 @@ void db_init(const char *name)
     static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
+   // static const char insert_msg[] = "INSERT INTO message(message,type,message_to,message_from,flag"
 
     if(!db_handle) {
         status = sqlite3_open_v2(
