@@ -8,7 +8,7 @@ CREATE TABLE sabot.user(
   PRIMARY KEY(id)
 ); 
 
-CREATE INDEX username_index ON sabot.user(name);
+CREATE INDEX username_index ON user(name);
 
 DROP TABLE IF EXISTS sabot.login;
 CREATE TABLE sabot.login(
