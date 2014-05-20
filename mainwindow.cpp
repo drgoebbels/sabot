@@ -85,27 +85,27 @@ void MainWindow::postRemoteMessage(message_s *msg)
     std::string message;
 
     if(msg->type == 'P') {
-        message.append(" [private] ");
+        message = " [private] ";
         putchar('\a');
     }
     if(msg->type == '9' || msg->type == 'P'){
         if(sender->mod_level == '0') {
-            message.append("<");
-            message.append(sender->name);
-            message.append("> ");
+            message += "<";
+            message += sender->name;
+            message += "> ";
         }
         else {
-            message.append("<<");
-            message.append(sender->name);
-            message.append(">> ");
+            message += "<<";
+            message += sender->name;
+            message += ">> ";
         }
     }
     else {
-        message.append("<~");
-        message.append(sender->name);
-        message.append("~>");
+        message += "<~";
+        message += sender->name;
+        message += "~>";
     }
-    message.append(msg->text);
+    message += msg->text;
     chatList->addItem(message.c_str());
     chatList->scrollToBottom();
 }
@@ -148,7 +148,7 @@ void MainWindow::editUsers(edit_users_s *edit)
     std::string id(u->id);
 
     if(u->mod_level > '0')
-        id.append("    --M--");
+        id += "    --M--";
     if(edit->add) {
         int c = userList->rowCount();
         userList->insertRow(c);
@@ -203,15 +203,15 @@ void MainWindow::serverListChanged(int index)
 
     if(!suppressLoginSignal) {
         last = conncurr->server;
-        message.append("####################-");
+        message = "####################-";
         tab = ui->serverTabs->currentWidget();
         chatList = tab->findChild<QListWidget *>("chatList");
 
         result = change_server(conncurr, sanet_servers[index][1]);
         if(result < 0) {
-            message.append("Failed to Connect to-");
-            message.append(sanet_servers[index][0]);
-            message.append("-####################");
+            message += "Failed to Connect to-";
+            message += sanet_servers[index][0];
+            message += "-####################";
             chatList->addItem(message.c_str());
             chatList->scrollToBottom();
             result = change_server(conncurr, last);
@@ -219,20 +219,20 @@ void MainWindow::serverListChanged(int index)
 
             if(result < 0) {
                 message.clear();
-                message.append("####################-Failed to Return to ");
-                message.append(sanet_servers[i][0]);
+                message += "####################-Failed to Return to ";
+                message += sanet_servers[i][0];
             }
             else {
                 message.clear();
-                message.append("####################-Returned to ");
-                message.append(sanet_servers[i][0]);
+                message += "####################-Returned to ";
+                message += sanet_servers[i][0];
             }
         }
         else {
-            message.append("Successfully Connected to ");
-            message.append(sanet_servers[index][0]);
+            message += "Successfully Connected to ";
+            message += sanet_servers[index][0];
         }
-        message.append("-####################");
+        message += "-####################";
         chatList->addItem(message.c_str());
         chatList->scrollToBottom();
     }
