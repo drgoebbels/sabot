@@ -66,6 +66,7 @@ static char finish_login[] = {
 
 static bool check_login(const char *server, const char *uname, const char *pass);
 static int connect_(const char *server);
+static int login_(connect_inst_s *conn);
 static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
 static void add_connection(connect_inst_s *c);
@@ -147,7 +148,7 @@ int connect_(const char *server)
     if (connect(sock, (struct sockaddr *)&sockin, sizeof(sockin)) == -1) {
         perror("connect failed");
         close(sock);
-        exit(EXIT_FAILURE);
+        sock = -1;
     }
     return sock;
 #endif
@@ -155,13 +156,8 @@ int connect_(const char *server)
 
 connect_inst_s *login(const char *server, const char *uname, const char *pass)
 {
-    int sock, c;
-    user_s *self;
-    char buf[2*MAX_UNAME_PASS+5];
     connect_inst_s *conn;
-    edit_users_s *edit;
     char lname[strlen(uname)+sizeof(".log")];
-    time_t timestamp;
     
     
     if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > 2*MAX_UNAME_PASS+5) {
@@ -179,11 +175,26 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     }
 #endif
     
-    sock = connect_(server);
 
     conn = alloc(sizeof(*conn));
+    conn->uname = uname;
+    conn->pass = pass;
     conn->server = server;
-    conn->sock = sock;
+
+    login_(conn);
+    
+
+    return conn;
+}
+
+int login_(connect_inst_s *conn)
+{
+    int c;
+    user_s *self;
+    edit_users_s *edit;
+    time_t timestamp;
+    char buf[2*MAX_UNAME_PASS+5];
+
     conn->chat.head = NULL;
     conn->chat.tail = NULL;
     conn->next = NULL;
@@ -191,13 +202,17 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->len = 0;
     conn->uqueue.head = NULL;
     pthread_mutex_init(&conn->chat.lock, NULL);
-    
-    send(sock, init_send, sizeof(init_send), 0);
-    recv(sock, buf, sizeof(buf), 0);
-    
-    sprintf(buf, LOGIN_FLAG "%s;%s", uname, pass);
-    send(sock, buf, strlen(buf)+1, 0);
-    
+    conn->sock = connect_(conn->server);
+
+    if(conn->sock < 0)
+        return -1;
+
+    send(conn->sock, init_send, sizeof(init_send), 0);
+    recv(conn->sock, buf, sizeof(buf), 0);
+
+    sprintf(buf, LOGIN_FLAG "%s;%s", conn->uname, conn->pass);
+    send(conn->sock, buf, strlen(buf)+1, 0);
+
     c = netgetc(conn);
     if(c == 'A') {
         self = parse_uname(conn);
@@ -221,20 +236,30 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
         netgetc(conn);
     }
 
-    send(sock, ack_x1, sizeof(ack_x1), 0);
-    send(sock, ack_x2, sizeof(ack_x2), 0);
-    send(sock, finish_login, sizeof(finish_login), 0);
+    send(conn->sock, ack_x1, sizeof(ack_x1), 0);
+    send(conn->sock, ack_x2, sizeof(ack_x2), 0);
+    send(conn->sock, finish_login, sizeof(finish_login), 0);
 
     pthread_mutex_lock(&monitor.lock);
     add_connection(conn);
     pthread_mutex_unlock(&monitor.lock);
-    
+
     conncurr = conn;
-    
-    pthread_create(&conn->thread, NULL, (void *(*)(void *))connect_thread, conn);
-    pthread_create(&conn->thread, NULL, (void *(*)(void *))ack_thread, conn);
-    
-    return conn;
+
+    pthread_create(&conn->conn_thread, NULL, (void *(*)(void *))connect_thread, conn);
+    pthread_create(&conn->ack_thread, NULL, (void *(*)(void *))ack_thread, conn);
+
+}
+
+int change_server(connect_inst_s *conn, const char *server)
+{
+    conn->server = server;
+    pthread_cancel(conn->conn_thread);
+    pthread_cancel(conn->ack_thread);
+
+    close(conn->sock);
+
+    return login_(conn);
 }
 
 connect_inst_s *quickstart(const char *server)

@@ -50,6 +50,7 @@ public slots:
     void editGamesSlot(edit_games_s *);
     void openDebugLogSlot();
     void scrollControl(QWheelEvent *);
+    void serverListChanged(int);
 
 signals:
 
@@ -57,6 +58,7 @@ signals:
 private:
     Ui::MainWindow *ui;
     MonitorThread *monitor;
+    bool suppressLoginSignal = false;
 };
 
 

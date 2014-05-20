@@ -211,7 +211,7 @@
       <property name="geometry">
        <rect>
         <x>670</x>
-        <y>10</y>
+        <y>220</y>
         <width>261</width>
         <height>281</height>
        </rect>
@@ -265,9 +265,9 @@
       <property name="geometry">
        <rect>
         <x>670</x>
-        <y>310</y>
-        <width>256</width>
-        <height>192</height>
+        <y>51</y>
+        <width>261</width>
+        <height>151</height>
        </rect>
       </property>
       <property name="font">
@@ -279,6 +279,84 @@
       <property name="wordWrap">
        <bool>true</bool>
       </property>
+     </widget>
+     <widget class="QComboBox" name="serverList">
+      <property name="geometry">
+       <rect>
+        <x>670</x>
+        <y>10</y>
+        <width>191</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="mouseTracking">
+       <bool>false</bool>
+      </property>
+      <property name="focusPolicy">
+       <enum>Qt::TabFocus</enum>
+      </property>
+      <property name="contextMenuPolicy">
+       <enum>Qt::DefaultContextMenu</enum>
+      </property>
+      <property name="editable">
+       <bool>false</bool>
+      </property>
+      <property name="currentText">
+       <string>2D Central</string>
+      </property>
+      <property name="sizeAdjustPolicy">
+       <enum>QComboBox::AdjustToContents</enum>
+      </property>
+      <item>
+       <property name="text">
+        <string>2D Central</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Paper Thin City</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Fine Line Island</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>U of SA</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Flat World</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Planar Outpost</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Mobius Metropolis</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>EU Amsterdam</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Compatibility</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>SS Lineage</string>
+       </property>
+      </item>
      </widget>
     </widget>
    </widget>
@@ -362,8 +440,23 @@
     </property>
     <addaction name="actionChange_Perspective"/>
    </widget>
+   <widget class="QMenu" name="menuChange_Server">
+    <property name="title">
+     <string>Change Server</string>
+    </property>
+    <addaction name="action2d_Central"/>
+    <addaction name="actionPaper_Thin_City"/>
+    <addaction name="actionFine_Line_Island"/>
+    <addaction name="actionU_of_SA"/>
+    <addaction name="actionFlat_World"/>
+    <addaction name="actionPlanar_Outpost"/>
+    <addaction name="actionMobius_Metropolis"/>
+    <addaction name="actionEU_Amsterdam"/>
+    <addaction name="actionCompatability"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuActions"/>
+   <addaction name="menuChange_Server"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -392,6 +485,51 @@
   <action name="actionOpen_Debug_Log">
    <property name="text">
     <string>Open Debug Log</string>
+   </property>
+  </action>
+  <action name="action2d_Central">
+   <property name="text">
+    <string>2d Central</string>
+   </property>
+  </action>
+  <action name="actionPaper_Thin_City">
+   <property name="text">
+    <string>Paper Thin City</string>
+   </property>
+  </action>
+  <action name="actionFine_Line_Island">
+   <property name="text">
+    <string>Fine Line Island</string>
+   </property>
+  </action>
+  <action name="actionU_of_SA">
+   <property name="text">
+    <string>U of SA</string>
+   </property>
+  </action>
+  <action name="actionFlat_World">
+   <property name="text">
+    <string>Flat World</string>
+   </property>
+  </action>
+  <action name="actionPlanar_Outpost">
+   <property name="text">
+    <string>Planar Outpost</string>
+   </property>
+  </action>
+  <action name="actionMobius_Metropolis">
+   <property name="text">
+    <string>Mobius Metropolis</string>
+   </property>
+  </action>
+  <action name="actionEU_Amsterdam">
+   <property name="text">
+    <string>EU Amsterdam</string>
+   </property>
+  </action>
+  <action name="actionCompatability">
+   <property name="text">
+    <string>Compatability</string>
    </property>
   </action>
  </widget>

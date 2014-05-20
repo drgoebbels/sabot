@@ -44,6 +44,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(monitor, SIGNAL(updateUserList(edit_users_s *)), this, SLOT(editUsers(edit_users_s *)));
     connect(monitor, SIGNAL(editGames(edit_games_s*)), this, SLOT(editGamesSlot(edit_games_s*)));
     connect(ui->chatList, SIGNAL(wheelEvent(QWheelEvent *)), this, SLOT(scrollControl(QWheelEvent *)));
+
+    connect(ui->serverList, SIGNAL(currentIndexChanged(int)), this, SLOT(serverListChanged(int)));
+
    // connect(ui->serverTabs->chi, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
     monitor->start();
 }
@@ -109,7 +112,7 @@ void MainWindow::postRemoteMessage(message_s *msg)
 
 void MainWindow::loginAccept()
 {
-    int index = lp->getServerListIndex();
+    int i, index = lp->getServerListIndex();
     const char **server = sanet_servers[index];
 
     std::string username = lp->getUsername().toStdString();
@@ -117,9 +120,11 @@ void MainWindow::loginAccept()
 
     login(server[1], username.c_str(), password.c_str());
 
+
     if(ui->serverTabs->count() == 1 && ui->messageBox->isReadOnly()) {
-        ui->serverTabs->setTabText(0, server[0]);
+        ui->serverTabs->setTabText(0, username.c_str());
         ui->messageBox->setReadOnly(false);
+        ui->serverList->setDisabled(false);
     }
     else {
         if(active & (1 << index)) {
@@ -127,6 +132,10 @@ void MainWindow::loginAccept()
         }
         //ui->serverTabs->addTab()
     }
+    suppressLoginSignal = true;
+
+    ui->serverList->setCurrentIndex(index);
+
     active |= (1 << index);
 }
 
@@ -184,10 +193,58 @@ void MainWindow::loginButtonClicked()
     lp->activateWindow();
 }
 
+void MainWindow::serverListChanged(int index)
+{
+    int result, i;
+    const char *last;
+    std::string message;
+    QWidget* tab;
+    QListWidget *chatList;
+
+    if(!suppressLoginSignal) {
+        last = conncurr->server;
+        message.append("####################-");
+        tab = ui->serverTabs->currentWidget();
+        chatList = tab->findChild<QListWidget *>("chatList");
+
+        result = change_server(conncurr, sanet_servers[index][1]);
+        if(result < 0) {
+            message.append("Failed to Connect to-");
+            message.append(sanet_servers[index][0]);
+            message.append("-####################");
+            chatList->addItem(message.c_str());
+            chatList->scrollToBottom();
+            result = change_server(conncurr, last);
+            for(i = 0; strcmp(sanet_servers[i][1], last); i++);
+
+            if(result < 0) {
+                message.clear();
+                message.append("####################-Failed to Return to ");
+                message.append(sanet_servers[i][0]);
+            }
+            else {
+                message.clear();
+                message.append("####################-Returned to ");
+                message.append(sanet_servers[i][0]);
+            }
+        }
+        else {
+            message.append("Successfully Connected to ");
+            message.append(sanet_servers[index][0]);
+        }
+        message.append("-####################");
+        chatList->addItem(message.c_str());
+        chatList->scrollToBottom();
+    }
+    else {
+        suppressLoginSignal = false;
+    }
+}
+
+
 void MainWindow::scrollControl(QWheelEvent *e)
 {
-    printf("delta %d\n", e->delta());
-    fflush(stdout);
+
 }
 
 MonitorThread::MonitorThread(Ui::MainWindow *parent)

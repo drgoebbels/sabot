@@ -103,9 +103,11 @@ struct connect_inst_s
 {
     const char *server;
     const char *uname;
+    const char *pass;
     int sock;
     chatbox_s chat;
-    pthread_t thread;
+    pthread_t conn_thread;
+    pthread_t ack_thread;
     size_t len;
     size_t i;
     char buf[BUF_SIZE];
@@ -178,6 +180,7 @@ extern connect_inst_s *conncurr;
 
 extern void sanet_init(void);
 extern connect_inst_s *login(const char *server, const char *uname, const char *pass);
+extern int change_server(connect_inst_s *conn, const char *server);
 extern connect_inst_s *quickstart(const char *server);
 extern void send_message(connect_inst_s *conn, const char *message, const char *prefix);
 extern void send_pmessage(connect_inst_s *conn, const char *message, const char *id);
