@@ -50,7 +50,8 @@ public slots:
     void editGamesSlot(edit_games_s *);
     void openDebugLogSlot();
     void scrollControl(QWheelEvent *);
-    void serverListChanged(int);
+    void beginServerChange(int);
+
 
 signals:
 

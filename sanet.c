@@ -22,14 +22,6 @@
 #define SLEEP_TIME 20
 #define LOGIN_FLAG "09"
 
-typedef struct ack_clean_s ack_clean_s;
-
-struct ack_clean_s
-{
-    pthread_mutex_t *tlock;
-    pthread_cond_t *tcond;
-};
-
 uid_hash_s sanet_users;
 
 connect_inst_s *connlist;
@@ -76,7 +68,6 @@ static int connect_(const char *server);
 static int login_(connect_inst_s *conn);
 static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
-static void ackthread_clean(void *args);
 static void add_connection(connect_inst_s *c);
 
 static int netgetc(connect_inst_s *conn);
@@ -191,10 +182,10 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     conn->chat.tail = NULL;
     conn->next = NULL;
     pthread_mutex_init(&conn->chat.lock, NULL);
+    pthread_cond_init(&conn->ack_timer, NULL);
 
     login_(conn);
     
-
     return conn;
 }
 
@@ -208,6 +199,8 @@ int login_(connect_inst_s *conn)
 
     conn->i = 0;
     conn->len = 0;
+    conn->isactive = true;
+    conn->isacking = true;
     conn->uqueue.head = NULL;
     conn->sock = connect_(conn->server);
 
@@ -255,7 +248,6 @@ int login_(connect_inst_s *conn)
 
     pthread_create(&conn->conn_thread, NULL, (void *(*)(void *))connect_thread, conn);
     pthread_create(&conn->ack_thread, NULL, (void *(*)(void *))ack_thread, conn);
-
 }
 
 int change_server(connect_inst_s *conn, const char *server)
@@ -263,8 +255,13 @@ int change_server(connect_inst_s *conn, const char *server)
 
     conn->isactive = false;
 
-    pthread_cancel(conn->ack_thread);
+    pthread_cond_signal(&conn->ack_timer);
+
     pthread_join(conn->conn_thread, NULL);
+    conn->isacking = false;
+    pthread_cond_signal(&conn->ack_timer);
+
+    pthread_join(conn->ack_thread, NULL);
 
     puts("called change server\n");
     fflush(stdout);
@@ -307,15 +304,7 @@ void connect_thread(connect_inst_s *conn)
         edit_users_s *edit;
         edit_games_s *game;
     } events;
-    
-    /* blank user to prevent segfaults in processing errors */
-
-    
-    //connthread_clean
-
-
-    conn->isactive = true;
-
+       
     while(conn->isactive) {
         i = 0;
         lex = lexbuf;
@@ -460,7 +449,8 @@ void connect_thread(connect_inst_s *conn)
                 break;
         }
     }
-
+    puts("exiting conn thread");
+    fflush(stdout);
     close(conn->sock);
     pthread_exit(NULL);
 }
@@ -472,19 +462,15 @@ void ack_thread(connect_inst_s *c)
 {
     int sock = c->sock;
     pthread_mutex_t tlock;
-    pthread_cond_t tcond;
     int rc;
     struct timespec ts;
     struct timeval tp;
-    ack_clean_s clean = {&tlock, &tcond};
     
     pthread_mutex_init(&tlock, NULL);
-    pthread_cond_init(&tcond, NULL);
-    
-    pthread_cleanup_push(ackthread_clean, &clean);
 
-    while(true) {
+    while(c->isacking) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
+        send(sock, ack_x1, sizeof(ack_x1), 0);
         send(sock, ack_x2, sizeof(ack_x2), 0);
 
         rc = gettimeofday(&tp, NULL);
@@ -494,18 +480,15 @@ void ack_thread(connect_inst_s *c)
         ts.tv_nsec = tp.tv_usec * 1000;
         ts.tv_sec += SLEEP_TIME;
 
-        pthread_cond_timedwait(&tcond, &tlock, &ts);
+        pthread_cond_timedwait(&c->ack_timer, &tlock, &ts);
     }
-    pthread_cleanup_pop(1);
-}
+    pthread_mutex_unlock(&tlock);
+    pthread_mutex_destroy(&tlock);
 
-void ackthread_clean(void *args)
-{
-    ack_clean_s *c = args;
+    puts("exiting ack thread");
+    fflush(stdout);
 
-    pthread_mutex_unlock(c->tlock);
-    pthread_mutex_destroy(c->tlock);
-    pthread_cond_destroy(c->tcond);
+    pthread_exit(NULL);
 }
 
 void add_connection(connect_inst_s *c)

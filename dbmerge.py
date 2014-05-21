@@ -18,7 +18,6 @@ def mergeDB(dbName):
                 data = sadb.fetchone()
                 if data is None:
                     sadb.execute('INSERT INTO user(name,password) VALUES(?,?)', row)             
-            sadbCon.commit()
         else:
             sys.stderr.write('Database %s does not exist\n' % dbName)
     except:
@@ -40,6 +39,7 @@ else:
             for arg in sys.argv[1:]:
                 print 'merging: %s\n' % arg
                 mergeDB(arg)
+            sadbCon.commit()
         else:
             sys.stderr.write('Failed to access Database sabot.db\n')
             sys.exit(1) 

@@ -45,9 +45,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(monitor, SIGNAL(editGames(edit_games_s*)), this, SLOT(editGamesSlot(edit_games_s*)));
     connect(ui->chatList, SIGNAL(wheelEvent(QWheelEvent *)), this, SLOT(scrollControl(QWheelEvent *)));
 
-    connect(ui->serverList, SIGNAL(currentIndexChanged(int)), this, SLOT(serverListChanged(int)));
+    connect(ui->serverList, SIGNAL(currentIndexChanged(int)), this, SLOT(beginServerChange(int)));
 
-   // connect(ui->serverTabs->chi, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
+    // connect(ui->serverTabs->chi, SIGNAL(triggered()), this, SLOT(openDebugLogSlot()));
     monitor->start();
 }
 
@@ -193,7 +193,7 @@ void MainWindow::loginButtonClicked()
     lp->activateWindow();
 }
 
-void MainWindow::serverListChanged(int index)
+void MainWindow::beginServerChange(int index)
 {
     int result, i;
     const char *last;
@@ -300,3 +300,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void signal_complete(void)
+{
+
+}
