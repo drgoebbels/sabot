@@ -8,8 +8,6 @@ CREATE TABLE sabot.user(
   PRIMARY KEY(id)
 ); 
 
-CREATE INDEX username_index ON user(name);
-
 DROP TABLE IF EXISTS sabot.login;
 CREATE TABLE sabot.login(
   id INTEGER NOT NULL, 
@@ -70,6 +68,10 @@ CREATE TABLE aes_key(
   key BLOB, 
   PRIMARY KEY(id)
 );
+
+#Keys that are indexed
+CREATE INDEX username_index ON user(name);
+CREATE INDEX userpkey_index ON user(id);
 
 INSERT INTO sabot.server(ip, name) VALUES("74.86.43.9", "2 Dimensional Central");
 INSERT INTO sabot.server(ip, name) VALUES("74.86.43.8", "Paper Thin City");

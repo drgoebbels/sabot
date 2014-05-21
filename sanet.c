@@ -22,6 +22,13 @@
 #define SLEEP_TIME 20
 #define LOGIN_FLAG "09"
 
+typedef struct ack_clean_s ack_clean_s;
+
+struct ack_clean_s
+{
+    pthread_mutex_t *tlock;
+    pthread_cond_t *tcond;
+};
 
 uid_hash_s sanet_users;
 
@@ -69,6 +76,7 @@ static int connect_(const char *server);
 static int login_(connect_inst_s *conn);
 static void connect_thread(connect_inst_s *c);
 static void ack_thread(connect_inst_s *c);
+static void ackthread_clean(void *args);
 static void add_connection(connect_inst_s *c);
 
 static int netgetc(connect_inst_s *conn);
@@ -104,9 +112,8 @@ bool check_login(const char *server, const char *uname, const char *pass)
 
 int connect_(const char *server)
 {
-    int sock;
-    static struct sockaddr_in sockin;
-    static int res;
+    int sock, res;
+    struct sockaddr_in sockin;
     
 #ifdef DEBUG_SIMULA
     traf_log = fopen(server, "r");
@@ -177,9 +184,13 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     
 
     conn = alloc(sizeof(*conn));
-    conn->uname = uname;
-    conn->pass = pass;
+    conn->uname = strdup(uname);
+    conn->pass = strdup(pass);
     conn->server = server;
+    conn->chat.head = NULL;
+    conn->chat.tail = NULL;
+    conn->next = NULL;
+    pthread_mutex_init(&conn->chat.lock, NULL);
 
     login_(conn);
     
@@ -195,13 +206,9 @@ int login_(connect_inst_s *conn)
     time_t timestamp;
     char buf[2*MAX_UNAME_PASS+5];
 
-    conn->chat.head = NULL;
-    conn->chat.tail = NULL;
-    conn->next = NULL;
     conn->i = 0;
     conn->len = 0;
     conn->uqueue.head = NULL;
-    pthread_mutex_init(&conn->chat.lock, NULL);
     conn->sock = connect_(conn->server);
 
     if(conn->sock < 0)
@@ -253,11 +260,16 @@ int login_(connect_inst_s *conn)
 
 int change_server(connect_inst_s *conn, const char *server)
 {
-    conn->server = server;
-    pthread_cancel(conn->conn_thread);
-    pthread_cancel(conn->ack_thread);
 
-    close(conn->sock);
+    conn->isactive = false;
+
+    pthread_cancel(conn->ack_thread);
+    pthread_join(conn->conn_thread, NULL);
+
+    puts("called change server\n");
+    fflush(stdout);
+
+    conn->server = server;
 
     return login_(conn);
 }
@@ -298,9 +310,13 @@ void connect_thread(connect_inst_s *conn)
     
     /* blank user to prevent segfaults in processing errors */
 
-    static user_s blank;
     
-    while(true) {
+    //connthread_clean
+
+
+    conn->isactive = true;
+
+    while(conn->isactive) {
         i = 0;
         lex = lexbuf;
         c = netgetc(conn);
@@ -393,8 +409,6 @@ void connect_thread(connect_inst_s *conn)
                 u = userlookup(lexbuf);
                 if(u)
                     events.message->base.user = u;
-                else
-                    events.message->base.user = &blank;
                 events.message->base.type = EVENT_CHAT_MSG;
                 events.message->base.timestamp = timestamp;
                 /* get type of message */
@@ -446,9 +460,13 @@ void connect_thread(connect_inst_s *conn)
                 break;
         }
     }
+
+    close(conn->sock);
+    pthread_exit(NULL);
 }
 
 #undef is_idchar_
+
 
 void ack_thread(connect_inst_s *c)
 {
@@ -458,23 +476,36 @@ void ack_thread(connect_inst_s *c)
     int rc;
     struct timespec ts;
     struct timeval tp;
+    ack_clean_s clean = {&tlock, &tcond};
     
     pthread_mutex_init(&tlock, NULL);
     pthread_cond_init(&tcond, NULL);
     
+    pthread_cleanup_push(ackthread_clean, &clean);
+
     while(true) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
         send(sock, ack_x2, sizeof(ack_x2), 0);
-        
+
         rc = gettimeofday(&tp, NULL);
         
         /* Convert from timeval to timespec */
         ts.tv_sec = tp.tv_sec;
         ts.tv_nsec = tp.tv_usec * 1000;
         ts.tv_sec += SLEEP_TIME;
-        
+
         pthread_cond_timedwait(&tcond, &tlock, &ts);
     }
+    pthread_cleanup_pop(1);
+}
+
+void ackthread_clean(void *args)
+{
+    ack_clean_s *c = args;
+
+    pthread_mutex_unlock(c->tlock);
+    pthread_mutex_destroy(c->tlock);
+    pthread_cond_destroy(c->tcond);
 }
 
 void add_connection(connect_inst_s *c)
@@ -503,8 +534,8 @@ int netgetc(connect_inst_s *s)
         s->len = read(s->sock, s->buf, sizeof(s->buf));
         s->i = 0;
         if(s->len <= 0) {
-            perror("Hit EOF or Lost Connection");
-            exit(0);
+            puts("Hit EOF or Lost Connection");
+            return EOF;
         }
     }
     if(s->buf[s->i])

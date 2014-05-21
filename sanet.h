@@ -105,6 +105,7 @@ struct connect_inst_s
     const char *uname;
     const char *pass;
     int sock;
+    bool isactive;
     chatbox_s chat;
     pthread_t conn_thread;
     pthread_t ack_thread;

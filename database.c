@@ -78,7 +78,7 @@ void db_init(const char *name)
     }
 }
 
-void add_user_record(user_s *user, char *server, time_t enter)
+void add_user_record(user_s *user, const char *server, time_t enter)
 {
     sqlite3_int64 id = -1, sid = -1;
     int status, type, icol = 0;

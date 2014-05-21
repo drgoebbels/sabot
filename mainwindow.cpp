@@ -202,19 +202,23 @@ void MainWindow::serverListChanged(int index)
     QListWidget *chatList;
 
     if(!suppressLoginSignal) {
+        ui->userTable->clear();
+        ui->gameList->clear();
+
         last = conncurr->server;
         message = "####################-";
         tab = ui->serverTabs->currentWidget();
         chatList = tab->findChild<QListWidget *>("chatList");
 
-        result = change_server(conncurr, sanet_servers[index][1]);
+        result = change_server(connlist, sanet_servers[index][1]);
+        fflush(stdout);
         if(result < 0) {
             message += "Failed to Connect to-";
             message += sanet_servers[index][0];
             message += "-####################";
             chatList->addItem(message.c_str());
             chatList->scrollToBottom();
-            result = change_server(conncurr, last);
+            result = change_server(connlist, last);
             for(i = 0; strcmp(sanet_servers[i][1], last); i++);
 
             if(result < 0) {
