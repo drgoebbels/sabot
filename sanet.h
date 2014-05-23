@@ -82,6 +82,7 @@ struct chat_event_s
 struct message_s
 {
     chat_event_s base;
+    size_t len;
     char text[148];
     char type;
 };
@@ -128,6 +129,7 @@ struct chat_packet_s
     bool is_consumed;
     user_s *user;
     char type;
+    size_t len;
     char text[148];
     chat_packet_s *next;
     chat_packet_s *prev;

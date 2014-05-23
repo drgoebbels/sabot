@@ -219,6 +219,7 @@ int login_(connect_inst_s *conn)
         adduser(self);
 
         timestamp = time(NULL);
+        dbadd_user_record(self, conn->server, timestamp);
 
         edit = alloc(sizeof(*edit));
         edit->base.type = EVENT_EDIT_USERS;
@@ -410,6 +411,8 @@ void connect_thread(connect_inst_s *conn)
                 /* get message content */
                 lex = events.message->text;
                 while((*lex++ = netgetc(conn)));
+                events.message->len = (lex - 1) - events.message->text;
+                dblog_message(events.message);
 
                 chptr = &conn->chat;
                 

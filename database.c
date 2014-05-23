@@ -25,6 +25,7 @@ static sqlite3_stmt *sql_getid;
 static sqlite3_stmt *sql_insert_usr;
 static sqlite3_stmt *sql_getsid;
 static sqlite3_stmt *sql_insert_login;
+static sqlite3_stmt *sql_insert_msg;
 
 static sem_t *sql_db_lock;
 
@@ -38,8 +39,7 @@ void db_init(const char *name)
     static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
-    static const char insert_msg[] = "INSERT INTO message(message,type,message_to,message_from,flag"
-
+    static const char insert_msg[] = "INSERT INTO message(message,type,sender) VALUES(?,?,?);";
     if(!db_handle) {
         status = sqlite3_open_v2(
                     name,
@@ -70,6 +70,10 @@ void db_init(const char *name)
                 fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
             }
             status = sqlite3_prepare_v2(db_handle, insert_login, sizeof(insert_login), &sql_insert_login, NULL);
+            if(status != SQLITE_OK) {
+                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            }
+            status = sqlite3_prepare_v2(db_handle, insert_msg, sizeof(insert_msg), &sql_insert_msg, NULL);
             if(status != SQLITE_OK) {
                 fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
             }
@@ -169,7 +173,18 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
 
 void dblog_message(message_s *msg)
 {
+    int status;
 
+    sqlite3_bind_text(sql_insert_msg, 1, msg->text, msg->len, SQLITE_STATIC);
+    sqlite3_bind_int(sql_insert_msg, 2, msg->type);
+    sqlite3_bind_int64(sql_insert_msg, 3, msg->base.user->login);
+
+    status = sqlite3_step(sql_insert_msg);
+    if(status != SQLITE_DONE)
+        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+
+    sqlite3_reset(sql_insert_msg);
+    sqlite3_clear_bindings(sql_insert_msg);
 }
 
 void store_account(void)

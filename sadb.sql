@@ -52,7 +52,7 @@ DROP TABLE IF EXISTS sabot.message;
 CREATE TABLE sabot.message(
   id INTEGER NOT NULL, 
   message TEXT, 
-  type TINYINT,
+  type CHAR,
   sender INTEGER, 
   FOREIGN KEY(sender) REFERENCES login(id),
   PRIMARY KEY(id)
