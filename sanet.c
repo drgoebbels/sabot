@@ -311,6 +311,8 @@ void connect_thread(connect_inst_s *conn)
         lex = lexbuf;
         c = netgetc(conn);
 
+        timestamp = time(NULL);
+
         switch(c) {
             case '0':
                 c = netgetc(conn);
@@ -323,7 +325,6 @@ void connect_thread(connect_inst_s *conn)
                             events.game = alloc(sizeof(*events.game));
                             events.game->glist = NULL;
                             while(c) {
-                                timestamp = time(NULL);
                                 node = alloc(sizeof(*node));
                                 lex = node->name;
                                 *lex++ = c;
@@ -370,7 +371,7 @@ void connect_thread(connect_inst_s *conn)
                 u = parse_uname(conn);
                 adduser(u);
                 
-                dbadd_user_record(u, conn->server, time(NULL));
+                dbadd_user_record(u, conn->server, timestamp);
 
                 events.edit = alloc(sizeof(*events.edit));
                 events.edit->base.type = EVENT_EDIT_USERS;

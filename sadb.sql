@@ -54,6 +54,7 @@ CREATE TABLE sabot.message(
   message TEXT, 
   type CHAR,
   sender INTEGER, 
+  time TIMESTAMP,
   FOREIGN KEY(sender) REFERENCES login(id),
   PRIMARY KEY(id)
 );

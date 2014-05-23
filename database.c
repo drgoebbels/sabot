@@ -39,7 +39,7 @@ void db_init(const char *name)
     static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
-    static const char insert_msg[] = "INSERT INTO message(message,type,sender) VALUES(?,?,?);";
+    static const char insert_msg[] = "INSERT INTO message(message,type,sender,time) VALUES(?,?,?,?);";
     if(!db_handle) {
         status = sqlite3_open_v2(
                     name,
@@ -48,7 +48,7 @@ void db_init(const char *name)
                     SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_PRIVATECACHE,
                     NULL);
         if(status != SQLITE_OK) {
-            fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+            fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
         }
         else {
             sql_db_lock = sem_open("sadb_mutex", O_CREAT, S_IRUSR | S_IWUSR, 1);
@@ -59,23 +59,23 @@ void db_init(const char *name)
 
             status = sqlite3_prepare_v2(db_handle, getid, sizeof(getid), &sql_getid, NULL);
             if(status != SQLITE_OK) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
             }
             status = sqlite3_prepare_v2(db_handle, insert_usr, sizeof(insert_usr), &sql_insert_usr, NULL);
             if(status != SQLITE_OK) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
             }
             status = sqlite3_prepare_v2(db_handle, getsid, sizeof(getsid), &sql_getsid, NULL);
             if(status != SQLITE_OK) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
             }
             status = sqlite3_prepare_v2(db_handle, insert_login, sizeof(insert_login), &sql_insert_login, NULL);
             if(status != SQLITE_OK) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
             }
             status = sqlite3_prepare_v2(db_handle, insert_msg, sizeof(insert_msg), &sql_insert_msg, NULL);
             if(status != SQLITE_OK) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
             }
         }
         atexit(db_clean);
@@ -99,7 +99,7 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
                 icol++;
             }
             else if (status == SQLITE_ERROR) {
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
                 break;
             }
             else {
@@ -112,13 +112,17 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
         if(id == -1) {
             status = sqlite3_bind_text(sql_insert_usr, 1, user->name, len, SQLITE_STATIC);
             if(status == SQLITE_OK) {
-                status = sqlite3_step(sql_insert_usr);
-                if(status != SQLITE_DONE) {
-                    user->user = -1;
-                    user->login = -1;
-                    fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-                    return;
+                do {
+                    status = sqlite3_step(sql_insert_usr);
+                    if(status == SQLITE_ERROR) {
+                        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                        sqlite3_reset(sql_insert_usr);
+                        sqlite3_clear_bindings(sql_insert_usr);
+                        return;
+                    }
                 }
+                while(status != SQLITE_DONE);
+
                 id = sqlite3_last_insert_rowid(db_handle);
                 sqlite3_reset(sql_insert_usr);
                 sqlite3_clear_bindings(sql_insert_usr);
@@ -137,7 +141,7 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
                     icol++;
                 }
                 else if (status == SQLITE_ERROR) {
-                    fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+                    fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
                 }
                 else {
                     //printf("type: %d\n",)
@@ -150,10 +154,17 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
             sqlite3_bind_text(sql_insert_login, 2, user->id, 3, SQLITE_STATIC);
             sqlite3_bind_int64(sql_insert_login, 3, sid);
             sqlite3_bind_int(sql_insert_login, 4, (int)enter);
-            status = sqlite3_step(sql_insert_login);
-            if(status != SQLITE_DONE)
-                fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-            else
+
+            do {
+                status = sqlite3_step(sql_insert_login);
+                if(status == SQLITE_ERROR) {
+                    fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                    break;
+                }
+            }
+            while(status != SQLITE_DONE);
+
+            if(status != SQLITE_ERROR)
                 user->login = sqlite3_last_insert_rowid(db_handle);
             sqlite3_reset(sql_insert_login);
             sqlite3_clear_bindings(sql_insert_login);
@@ -165,7 +176,7 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
         sqlite3_clear_bindings(sql_getsid);
     }
     else {        
-        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
     }
     sqlite3_reset(sql_getid);
     sqlite3_clear_bindings(sql_getid);
@@ -178,10 +189,16 @@ void dblog_message(message_s *msg)
     sqlite3_bind_text(sql_insert_msg, 1, msg->text, msg->len, SQLITE_STATIC);
     sqlite3_bind_int(sql_insert_msg, 2, msg->type);
     sqlite3_bind_int64(sql_insert_msg, 3, msg->base.user->login);
+    sqlite3_bind_int64(sql_insert_msg, 4, msg->base.timestamp);
 
-    status = sqlite3_step(sql_insert_msg);
-    if(status != SQLITE_DONE)
-        fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
+    do {
+        status = sqlite3_step(sql_insert_msg);
+        if(status == SQLITE_ERROR) {
+            fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+            break;
+        }
+    }
+    while(status != SQLITE_DONE);
 
     sqlite3_reset(sql_insert_msg);
     sqlite3_clear_bindings(sql_insert_msg);
