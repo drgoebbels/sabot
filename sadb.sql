@@ -53,11 +53,8 @@ CREATE TABLE sabot.message(
   id INTEGER NOT NULL, 
   message TEXT, 
   type TINYINT,
-  message_to INTEGER, 
-  message_from INTEGER, 
-  flag TINYINT DEFAULT 0, 
-  FOREIGN KEY(message_to) REFERENCES login(id),
-  FOREIGN KEY(message_from) REFERENCES login(id), 
+  sender INTEGER, 
+  FOREIGN KEY(sender) REFERENCES login(id),
   PRIMARY KEY(id)
 );
 
@@ -69,7 +66,7 @@ CREATE TABLE aes_key(
   PRIMARY KEY(id)
 );
 
-#Keys that are indexed
+/* Keys that are indexed */
 CREATE INDEX username_index ON user(name);
 CREATE INDEX userpkey_index ON user(id);
 

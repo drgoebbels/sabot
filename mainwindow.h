@@ -31,6 +31,18 @@ private:
 
     Ui::MainWindow *parent;
 };
+/*
+class ChangeServers : public QThread
+{
+    Q_OBJECT
+
+public:
+    ChangeServers();
+
+private:
+    void run();
+
+};*/
 
 class MainWindow : public QMainWindow
 {

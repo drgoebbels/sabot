@@ -154,6 +154,10 @@ struct user_s
     char field5[32];
     char field6[32];
     char mod_level;
+
+    /*database table keys */
+    int64_t user;
+    int64_t login;
 };
     
 struct uid_record_s

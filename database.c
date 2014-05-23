@@ -38,7 +38,7 @@ void db_init(const char *name)
     static const char insert_usr[] = "INSERT INTO user(name) VALUES(?);";
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
-   // static const char insert_msg[] = "INSERT INTO message(message,type,message_to,message_from,flag"
+    static const char insert_msg[] = "INSERT INTO message(message,type,message_to,message_from,flag"
 
     if(!db_handle) {
         status = sqlite3_open_v2(
@@ -78,7 +78,7 @@ void db_init(const char *name)
     }
 }
 
-void add_user_record(user_s *user, const char *server, time_t enter)
+void dbadd_user_record(user_s *user, const char *server, time_t enter)
 {
     sqlite3_int64 id = -1, sid = -1;
     int status, type, icol = 0;
@@ -110,6 +110,8 @@ void add_user_record(user_s *user, const char *server, time_t enter)
             if(status == SQLITE_OK) {
                 status = sqlite3_step(sql_insert_usr);
                 if(status != SQLITE_DONE) {
+                    user->user = -1;
+                    user->login = -1;
                     fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
                     return;
                 }
@@ -118,6 +120,8 @@ void add_user_record(user_s *user, const char *server, time_t enter)
                 sqlite3_clear_bindings(sql_insert_usr);
             }
         }
+
+        user->user = id;
         status = sqlite3_bind_text(sql_getsid, 1, server, strlen(server), SQLITE_STATIC);
         if(status == SQLITE_OK) {
             icol = 0;
@@ -143,9 +147,10 @@ void add_user_record(user_s *user, const char *server, time_t enter)
             sqlite3_bind_int64(sql_insert_login, 3, sid);
             sqlite3_bind_int(sql_insert_login, 4, (int)enter);
             status = sqlite3_step(sql_insert_login);
-            if(status != SQLITE_DONE) {
+            if(status != SQLITE_DONE)
                 fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
-            }
+            else
+                user->login = sqlite3_last_insert_rowid(db_handle);
             sqlite3_reset(sql_insert_login);
             sqlite3_clear_bindings(sql_insert_login);
         }
@@ -155,11 +160,16 @@ void add_user_record(user_s *user, const char *server, time_t enter)
         sqlite3_reset(sql_getsid);
         sqlite3_clear_bindings(sql_getsid);
     }
-    else {
+    else {        
         fprintf(stderr, "%s", sqlite3_errmsg(db_handle));
     }
     sqlite3_reset(sql_getid);
     sqlite3_clear_bindings(sql_getid);
+}
+
+void dblog_message(message_s *msg)
+{
+
 }
 
 void store_account(void)

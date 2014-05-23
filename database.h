@@ -9,7 +9,8 @@ extern "C" {
 
 extern void db_init(const char *name);
 
-extern void add_user_record(user_s *user, const char *server, time_t enter);
+extern void dbadd_user_record(user_s *user, const char *server, time_t enter);
+extern void dblog_message(message_s *msg);
 
 extern void store_account(void);
 extern void authenticate(void);

@@ -369,7 +369,7 @@ void connect_thread(connect_inst_s *conn)
                 u = parse_uname(conn);
                 adduser(u);
                 
-                add_user_record(u, conn->server, time(NULL));
+                dbadd_user_record(u, conn->server, time(NULL));
 
                 events.edit = alloc(sizeof(*events.edit));
                 events.edit->base.type = EVENT_EDIT_USERS;
@@ -641,6 +641,9 @@ user_s *parse_uname(connect_inst_s *conn)
         
     u->mod_level = netgetc(conn);
     
+    u->login = -1;
+    u->user = -1;
+
     return u;
 }
 
