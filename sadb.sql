@@ -51,7 +51,7 @@ CREATE TABLE sabot.server(
 DROP TABLE IF EXISTS sabot.message; 
 CREATE TABLE sabot.message(
   id INTEGER NOT NULL, 
-  message TEXT, 
+  body TEXT, 
   type CHAR,
   sender INTEGER, 
   time TIMESTAMP,
