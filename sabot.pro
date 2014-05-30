@@ -18,7 +18,8 @@ SOURCES += main.cpp\
         sanet.c \
         general.c \
         loginprompt.cpp \
-        servers.c
+        servers.c \
+        regex.c
 
 HEADERS  += mainwindow.h \
             sanet.h \
@@ -26,7 +27,8 @@ HEADERS  += mainwindow.h \
             crypt.h \
             general.h \
             loginprompt.h \
-            servers.h
+            servers.h \
+            regex.h
 
 FORMS    += mainwindow.ui \
     loginprompt.ui

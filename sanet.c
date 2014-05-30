@@ -19,7 +19,7 @@
 
 //#define DEBUG_SIMULA
 
-#define SLEEP_TIME 20
+#define SLEEP_TIME 5
 #define LOGIN_FLAG "09"
 
 uid_hash_s sanet_users;
@@ -62,6 +62,8 @@ static char ack_x2[] = {
 static char finish_login[] = {
     0x30, 0x33, 0x5f, 0x00
 };
+
+//{exp} -> {send "you suck"}
 
 static bool check_login(const char *server, const char *uname, const char *pass);
 static int connect_(const char *server);
@@ -406,7 +408,7 @@ void connect_thread(connect_inst_s *conn)
                 events.message->type = netgetc(conn);
                 
                 if(events.message->type == 'P') {
-                    //send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
+                  //  send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
                 }
 
                 /* get message content */
@@ -474,7 +476,7 @@ void ack_thread(connect_inst_s *c)
 
     while(c->isacking) {
         send(sock, ack_x0, sizeof(ack_x0), 0);
-        send(sock, ack_x1, sizeof(ack_x1), 0);
+        //send(sock, ack_x1, sizeof(ack_x1), 0);
         send(sock, ack_x2, sizeof(ack_x2), 0);
 
         rc = gettimeofday(&tp, NULL);

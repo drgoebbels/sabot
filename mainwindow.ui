@@ -16,7 +16,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>SA Bot</string>
   </property>
   <property name="documentMode">
    <bool>false</bool>
@@ -285,7 +285,7 @@
        <rect>
         <x>670</x>
         <y>10</y>
-        <width>191</width>
+        <width>171</width>
         <height>26</height>
        </rect>
       </property>

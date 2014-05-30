@@ -147,8 +147,11 @@ void MainWindow::editUsers(edit_users_s *edit)
     std::string user(u->name);
     std::string id(u->id);
 
-    if(u->mod_level > '0')
-        id += "    --M--";
+    if(u->mod_level > '0') {
+        id += "    --M.";
+        id += u->mod_level;
+        id += "--";
+    }
     if(edit->add) {
         int c = userList->rowCount();
         userList->insertRow(c);
