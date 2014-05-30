@@ -3,7 +3,15 @@
 
 /*
  <start> := ^ char <exp> | <exp>
- <exp> := char | <class> | ( <exp> ) |
+ <exp> := char | <class> | ( <exp> ) | <exp> <closure>
+
+ <closure> := * | + | ? | { <digits> }
+
+ <digits> := <digit> <digits>
+ <digit> := digit
+ <class> := [ <class'> ]
+ <class'> := ^ char | char <char'>
+ <char'>
  
  */
 

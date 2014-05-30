@@ -81,7 +81,7 @@ void MainWindow::postRemoteMessage(message_s *msg)
 {
     user_s *sender = msg->base.user;
     QWidget* tab = ui->serverTabs->currentWidget();
-    QListWidget *chatList = tab->findChild<QListWidget *>("chatList");
+    QListWidget *list;
     std::string message;
 
     if(msg->type == 'P') {
@@ -89,6 +89,7 @@ void MainWindow::postRemoteMessage(message_s *msg)
         putchar('\a');
     }
     if(msg->type == '9' || msg->type == 'P'){
+        list = tab->findChild<QListWidget *>("chatList");
         if(sender->mod_level == '0') {
             message += "<";
             message += sender->name;
@@ -101,13 +102,16 @@ void MainWindow::postRemoteMessage(message_s *msg)
         }
     }
     else {
-        message += "<~";
+        list = tab->findChild<QListWidget *>("miscTraffic");
+        message += "* <";
         message += sender->name;
-        message += "~>";
+        message += ":";
+        message += msg->type;
+        message += "> ";
     }
     message += msg->text;
-    chatList->addItem(message.c_str());
-    chatList->scrollToBottom();
+    list->addItem(message.c_str());
+    list->scrollToBottom();
 }
 
 void MainWindow::loginAccept()
@@ -144,8 +148,21 @@ void MainWindow::editUsers(edit_users_s *edit)
     user_s *u = edit->base.user;
     QWidget* tab = ui->serverTabs->currentWidget();
     QTableWidget *userList = tab->findChild<QTableWidget *>("userTable");
+    QListWidget *list = tab->findChild<QListWidget *>("miscTraffic");
+
     std::string user(u->name);
     std::string id(u->id);
+    std::string message;
+
+    if(edit->add)
+        message += "+ <";
+    else
+        message += "- <";
+
+    message += u->name;
+    message += "|";
+    message += u->id;
+    message += "> ";
 
     if(u->mod_level > '0') {
         id += "    --M.";
@@ -154,6 +171,7 @@ void MainWindow::editUsers(edit_users_s *edit)
     }
     if(edit->add) {
         int c = userList->rowCount();
+        message += "has entered the chatroom.";
         userList->insertRow(c);
         userList->setItem(c, 0, new QTableWidgetItem(QString::fromStdString(user)));
         userList->setItem(c, 1, new QTableWidgetItem(QString::fromStdString(id)));
@@ -161,8 +179,11 @@ void MainWindow::editUsers(edit_users_s *edit)
     }
     else {
         QList<QTableWidgetItem *> item = userList->findItems(QString::fromStdString(id), Qt::MatchExactly);
+        message += "has left the chatroom.";
         userList->removeRow(item.first()->row());
     }
+    list->addItem(message.c_str());
+    list->scrollToBottom();
 }
 
 void MainWindow::editGamesSlot(edit_games_s *game)

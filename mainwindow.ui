@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>997</width>
-    <height>696</height>
+    <width>1369</width>
+    <height>694</height>
    </rect>
   </property>
   <property name="font">
@@ -53,7 +53,7 @@
      <rect>
       <x>10</x>
       <y>0</y>
-      <width>961</width>
+      <width>1351</width>
       <height>551</height>
      </rect>
     </property>
@@ -191,6 +191,9 @@
       <property name="selectionMode">
        <enum>QAbstractItemView::SingleSelection</enum>
       </property>
+      <property name="textElideMode">
+       <enum>Qt::ElideNone</enum>
+      </property>
       <property name="verticalScrollMode">
        <enum>QAbstractItemView::ScrollPerItem</enum>
       </property>
@@ -199,6 +202,9 @@
       </property>
       <property name="layoutMode">
        <enum>QListView::SinglePass</enum>
+      </property>
+      <property name="viewMode">
+       <enum>QListView::ListMode</enum>
       </property>
       <property name="modelColumn">
        <number>0</number>
@@ -213,8 +219,72 @@
         <x>670</x>
         <y>180</y>
         <width>261</width>
-        <height>321</height>
+        <height>331</height>
        </rect>
+      </property>
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>127</red>
+            <green>127</green>
+            <blue>127</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>237</red>
+            <green>237</green>
+            <blue>237</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
       </property>
       <property name="font">
        <font>
@@ -224,6 +294,9 @@
       </property>
       <property name="autoFillBackground">
        <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
       </property>
       <property name="showGrid">
        <bool>false</bool>
@@ -270,11 +343,87 @@
         <height>121</height>
        </rect>
       </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>127</red>
+            <green>127</green>
+            <blue>127</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>237</red>
+            <green>237</green>
+            <blue>237</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
       <property name="font">
        <font>
         <family>Courier</family>
         <pointsize>10</pointsize>
        </font>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="isWrapping" stdset="0">
+       <bool>true</bool>
       </property>
       <property name="wordWrap">
        <bool>true</bool>
@@ -358,6 +507,101 @@
        </property>
       </item>
      </widget>
+     <widget class="QListWidget" name="miscTraffic">
+      <property name="geometry">
+       <rect>
+        <x>940</x>
+        <y>50</y>
+        <width>401</width>
+        <height>461</height>
+       </rect>
+      </property>
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>0</red>
+            <green>0</green>
+            <blue>0</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Text">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>127</red>
+            <green>127</green>
+            <blue>127</blue>
+           </color>
+          </brush>
+         </colorrole>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>237</red>
+            <green>237</green>
+            <blue>237</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
+      <property name="font">
+       <font>
+        <family>Courier</family>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="textElideMode">
+       <enum>Qt::ElideNone</enum>
+      </property>
+      <property name="isWrapping" stdset="0">
+       <bool>false</bool>
+      </property>
+      <property name="layoutMode">
+       <enum>QListView::SinglePass</enum>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
     </widget>
    </widget>
    <widget class="QRadioButton" name="privateMessage">
@@ -421,7 +665,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>997</width>
+     <width>1369</width>
      <height>22</height>
     </rect>
    </property>
