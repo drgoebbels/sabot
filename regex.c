@@ -1,5 +1,5 @@
 #include "regex.h"
-
+#include "general.h"
 
 /*
  <start> -> <anchor_start> <expressions> <anchor_end>
@@ -87,16 +87,35 @@ void rp_expressions_(const char **c)
 
 void rp_expression(const char **c)
 {
-    switch(**c) {
-        case '.':
-
-            break;
-        case '[':
-            while(*++*c != ']') {
+    while(**c) {
+        switch(**c) {
+            case '.':
                 
-            }
-            break;
-
+                break;
+            case '[':
+                while(*++*c != ']') {
+                    if(!**c) {
+                        //regex error
+                    }
+                    else {
+                        
+                    }
+                }
+                break;
+            case '(':
+                rp_expression(c);
+                if(**c == '(') {
+                    
+                }
+                else {
+                    
+                }
+                break;
+            case ')':
+                return;
+            default:
+                break;
+        }
     }
 }
 
