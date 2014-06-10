@@ -21,20 +21,24 @@
  
  */
 
+static const char *c;
+static regex_s *mach;
 
-static void rp_start(const char **c);
-static void rp_anchor_start(const char **c);
-static void rp_anchor_end(const char **c);
-static void rp_expressions(const char **c);
-static void rp_expressions_(const char **c);
-static void rp_expression(const char **c);
-static void rp_class(const char **c);
-static void rp_chars(const char **c);
-static void rp_chars_(const char **c);
-static void rp_closure(const char **c);
-static void rp_union(const char **c);
-static void rp_digits(const char **c);
-static void rp_digit(const char **c);
+static void rp_start(void);
+static void rp_anchor_start(void);
+static void rp_anchor_end(void);
+static void rp_expressions(void);
+static void rp_expressions_(void);
+static void rp_expression(void);
+static void rp_class(void);
+static void rp_chars(void);
+static void rp_chars_(void);
+static void rp_closure(void);
+static void rp_union(void);
+static void rp_digits(void);
+static void rp_digit(void);
+
+static void rp_error(const char *, ...);
 
 regex_s *compile_regex(const char *src)
 {
@@ -44,57 +48,57 @@ regex_s *compile_regex(const char *src)
  
 }
 
-void rp_start(const char **c)
+void rp_start(void)
 {
-    if(**c == '^') {
-        rp_anchor_start(c);
+    if(*c == '^') {
+        rp_anchor_start();
     }
-    rp_expressions(c);
-    if(**c == '$') {
-        rp_anchor_end(c);
-    }
-}
-
-void rp_anchor_start(const char **c)
-{
-    ++*c;
-}
-
-void rp_anchor_end(const char **c)
-{
-    ++*c;
-}
-
-void rp_expressions(const char **c)
-{
-    rp_expression(c);
-    rp_closure(c);
-    rp_expressions_(c);
-}
-
-void rp_expressions_(const char **c)
-{
-    if(**c == '|') {
-        ++*c;
-        rp_expression(c);
-        rp_closure(c);
-    }
-    else if(**c) {
-        rp_expression(c);
-        rp_closure(c);
+    rp_expressions();
+    if(*c == '$') {
+        rp_anchor_end();
     }
 }
 
-void rp_expression(const char **c)
+void rp_anchor_start(void)
 {
-    while(**c) {
-        switch(**c) {
+    c++;
+}
+
+void rp_anchor_end(void)
+{
+    c++;
+}
+
+void rp_expressions(void)
+{
+    rp_expression();
+    rp_closure();
+    rp_expressions_();
+}
+
+void rp_expressions_(void)
+{
+    if(*c == '|') {
+        c++;
+        rp_expression();
+        rp_closure();
+    }
+    else if(*c) {
+        rp_expression();
+        rp_closure();
+    }
+}
+
+void rp_expression(void)
+{
+    while(*c) {
+        switch(*c) {
             case '.':
                 
                 break;
             case '[':
-                while(*++*c != ']') {
-                    if(!**c) {
+                while(*c++ != ']') {
+                    if(!*c) {
                         //regex error
                     }
                     else {
@@ -103,8 +107,8 @@ void rp_expression(const char **c)
                 }
                 break;
             case '(':
-                rp_expression(c);
-                if(**c == '(') {
+                rp_expression();
+                if(*c == '(') {
                     
                 }
                 else {
@@ -112,44 +116,49 @@ void rp_expression(const char **c)
                 }
                 break;
             case ')':
+            case '|':
+            case '*':
+            case '+':
+            case '?':
                 return;
             default:
                 break;
         }
+        c++;
     }
 }
 
-void rp_class(const char **c)
+void rp_class(void)
 {
     
 }
 
-void rp_chars(const char **c)
+void rp_chars(void)
 {
     
 }
 
-void rp_chars_(const char **c)
+void rp_chars_(void)
 {
     
 }
 
-void rp_closure(const char **c)
+void rp_closure(void)
 {
     
 }
 
-void rp_union(const char **c)
+void rp_union(void)
 {
     
 }
 
-void rp_digits(const char **c)
+void rp_digits(void)
 {
     
 }
 
-void rp_digit(const char **c)
+void rp_digit(void)
 {
     
 }
