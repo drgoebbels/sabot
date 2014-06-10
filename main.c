@@ -6,6 +6,7 @@
 #include "crypt.h"
 #include "sanet.h"
 #include "database.h"
+#include "regex.h"
 
 #define N_TESTS 1000
 
@@ -16,6 +17,10 @@ int main(int arc, char *argv[])
 {
     aes_digest_s *tmp;
     
+    
+    compile_regex("abc | 123");
+    
+    return 0;
     print_aesdigest(tmp = aes_encrypt(clear, sizeof(clear)-1, key));
     puts("\n");
     print_aesdigest(aes_decrypt(tmp->data, tmp->size, key));

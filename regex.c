@@ -75,15 +75,40 @@ void rp_expressions(void)
 
 void rp_expressions_(void)
 {
+    const char *last;
+    
     while(*c) {
         if(*c == '|') {
-            c++;
-            if(*c) {
-                rp_expression();
-                rp_closure();
-            }
-            else {
-                rp_error("Error: Premature nul character");
+            last = ++c;
+            rp_expression();
+            rp_closure();
+            
+            if(c == last) {
+                switch(*c) {
+                    case ')':
+                        rp_error("Inappropriate placement of close parenthesis following alternation");
+                        break;
+                    case '|':
+                        rp_error("Inappropriate placement of alternation following alternation");
+                        break;
+                    case '*':
+                        rp_error("Inappropriate placement of kleene star closure following alternation");
+                        break;
+                    case '+':
+                        rp_error("Inappropriate placement of positive closure following alternation");
+                        break;
+                    case '?':
+                        rp_error("Inappropriate placement of '?' following alternation");
+                        break;
+                    case '{':
+                        rp_error("Inappropriate placement of '{' following alternation");
+                        break;
+                    case '$':
+                        rp_error("Inappropriate placement of 'end of line' following alternation");
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         else if(*c) {
@@ -103,7 +128,7 @@ void rp_expression(void)
             case '[':
                 while(*c++ != ']') {
                     if(!*c) {
-                        rp_error("Error: Premature nul character");
+                        rp_error("Premature nul character");
                     }
                     else {
                         
@@ -128,6 +153,7 @@ void rp_expression(void)
             case '*':
             case '+':
             case '?':
+            case '{':
             case '$':
                 return;
             default:
@@ -184,13 +210,16 @@ void rp_digit(void)
 
 void rp_error_(const char *e, size_t len)
 {
-#define  suffix " At char %c."
+#define prefix "Error: "
+#define suffix " At char %c."
     
     regerr_s *err;
     
-    err = alloc(sizeof(*err) + sizeof(suffix) + strlen(e));
+    err = alloc(sizeof(*err) + sizeof(prefix) + sizeof(suffix) + strlen(e) - 1);
     err->pos = e - start;
     sprintf(err->msg, "%s" suffix, e, *c);
+    
+    fprintf(stderr, "%s\n", err->msg);
     
     if(errptr)
         errptr->next = err;
@@ -198,7 +227,9 @@ void rp_error_(const char *e, size_t len)
         mach->err = err;
     errptr = err;
     err->next = NULL;
+    
 
+#undef previx
 #undef suffix
 }
 
