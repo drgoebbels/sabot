@@ -1,5 +1,9 @@
 #include "regex.h"
 #include "general.h"
+#include <string.h>
+#include <stdio.h>
+
+#define rp_error(a) rp_error_(a,sizeof(a))
 
 /*
  <start> -> <anchor_start> <expressions> <anchor_end>
@@ -21,12 +25,12 @@
  
  */
 
-static const char *c;
 static regex_s *mach;
+static const char *start;
+static const char *c;
+static regerr_s *errptr;
 
 static void rp_start(void);
-static void rp_anchor_start(void);
-static void rp_anchor_end(void);
 static void rp_expressions(void);
 static void rp_expressions_(void);
 static void rp_expression(void);
@@ -38,35 +42,28 @@ static void rp_union(void);
 static void rp_digits(void);
 static void rp_digit(void);
 
-static void rp_error(const char *, ...);
+static void rp_error_(const char *e, size_t len);
 
 regex_s *compile_regex(const char *src)
 {
-    char c;
-    regex_s *reg;
-    
- 
+    start = c = src;
+    mach = allocz(sizeof(*mach));
+    rp_start();
+    return mach;
 }
 
 void rp_start(void)
 {
     if(*c == '^') {
-        rp_anchor_start();
+        c++;
     }
     rp_expressions();
     if(*c == '$') {
-        rp_anchor_end();
+        c++;
+        if(*c) {
+            //error
+        }
     }
-}
-
-void rp_anchor_start(void)
-{
-    c++;
-}
-
-void rp_anchor_end(void)
-{
-    c++;
 }
 
 void rp_expressions(void)
@@ -78,14 +75,21 @@ void rp_expressions(void)
 
 void rp_expressions_(void)
 {
-    if(*c == '|') {
-        c++;
-        rp_expression();
-        rp_closure();
-    }
-    else if(*c) {
-        rp_expression();
-        rp_closure();
+    while(*c) {
+        if(*c == '|') {
+            c++;
+            if(*c) {
+                rp_expression();
+                rp_closure();
+            }
+            else {
+                rp_error("Error: Premature nul character");
+            }
+        }
+        else if(*c) {
+            rp_expression();
+            rp_closure();
+        }
     }
 }
 
@@ -99,7 +103,7 @@ void rp_expression(void)
             case '[':
                 while(*c++ != ']') {
                     if(!*c) {
-                        //regex error
+                        rp_error("Error: Premature nul character");
                     }
                     else {
                         
@@ -115,11 +119,16 @@ void rp_expression(void)
                     
                 }
                 break;
+            case '\\':
+                c++;
+                
+                break;
             case ')':
             case '|':
             case '*':
             case '+':
             case '?':
+            case '$':
                 return;
             default:
                 break;
@@ -145,7 +154,17 @@ void rp_chars_(void)
 
 void rp_closure(void)
 {
-    
+    switch(*c) {
+        case '*':
+            break;
+        case '+':
+            break;
+        case '?':
+            break;
+        default:
+            break;
+    }
+    c++;
 }
 
 void rp_union(void)
@@ -162,3 +181,25 @@ void rp_digit(void)
 {
     
 }
+
+void rp_error_(const char *e, size_t len)
+{
+#define  suffix " At char %c."
+    
+    regerr_s *err;
+    
+    err = alloc(sizeof(*err) + sizeof(suffix) + strlen(e));
+    err->pos = e - start;
+    sprintf(err->msg, "%s" suffix, e, *c);
+    
+    if(errptr)
+        errptr->next = err;
+    else
+        mach->err = err;
+    errptr = err;
+    err->next = NULL;
+
+#undef suffix
+}
+
+

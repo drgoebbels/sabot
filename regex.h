@@ -33,6 +33,7 @@ struct fsmnode_s
 struct regerr_s
 {
     regerr_s *next;
+    unsigned short pos;
     char msg[];
 };
 
