@@ -466,6 +466,7 @@ void connect_thread(connect_inst_s *conn)
 
 void ack_thread(connect_inst_s *c)
 {
+    uint8_t count = 0;
     int sock = c->sock;
     pthread_mutex_t tlock;
     int rc;
@@ -475,8 +476,8 @@ void ack_thread(connect_inst_s *c)
     pthread_mutex_init(&tlock, NULL);
 
     while(c->isacking) {
-        send(sock, ack_x0, sizeof(ack_x0), 0);
-        //send(sock, ack_x1, sizeof(ack_x1), 0);
+        if(!(count % 32))
+            send(sock, ack_x0, sizeof(ack_x0), 0);
         send(sock, ack_x2, sizeof(ack_x2), 0);
 
         rc = gettimeofday(&tp, NULL);
@@ -487,6 +488,7 @@ void ack_thread(connect_inst_s *c)
         ts.tv_sec += SLEEP_TIME;
 
         pthread_cond_timedwait(&c->ack_timer, &tlock, &ts);
+        count++;
     }
     pthread_mutex_unlock(&tlock);
     pthread_mutex_destroy(&tlock);
@@ -655,7 +657,7 @@ user_s *parse_uname(connect_inst_s *conn)
 
 
 inline void msg_lock(connect_inst_s *conn)
-{
+{    
     pthread_mutex_lock(&conn->chat.lock);
 }
 

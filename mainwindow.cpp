@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -85,7 +86,10 @@ void MainWindow::postRemoteMessage(message_s *msg)
     std::string message;
 
     if(msg->type == 'P') {
-        message = " [private] ";
+        if(strcmp(msg->text, ">VIP<") && strcmp(msg->text, ">UNVIP<"))
+            message = " [private] ";
+        else
+            message = " {vip} ";
         putchar('\a');
     }
     if(msg->type == '9' || msg->type == 'P'){
@@ -269,6 +273,9 @@ void MainWindow::beginServerChange(int index)
     }
 }
 
+void userOptions(QListWidgetItem *item)
+{
+}
 
 void MainWindow::scrollControl(QWheelEvent *e)
 {

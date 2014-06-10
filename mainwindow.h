@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMenu>
 #include <QThread>
 #include <QMutex>
 #include <QWaitCondition>
@@ -64,11 +65,12 @@ public slots:
     void scrollControl(QWheelEvent *);
     void beginServerChange(int);
 
-
 signals:
 
 
 private:
+
+
     Ui::MainWindow *ui;
     MonitorThread *monitor;
     bool suppressLoginSignal = false;

@@ -17,6 +17,8 @@
  <digits> -> digit <digits'>
  <digits'> -> digit <digits'> | E
  
+ first(<expressions>) = first(<expression>) = char,
+ 
  */
 
 
@@ -72,14 +74,30 @@ void rp_expressions(const char **c)
 
 void rp_expressions_(const char **c)
 {
-    switch(**c) {
-        
+    if(**c == '|') {
+        ++*c;
+        rp_expression(c);
+        rp_closure(c);
+    }
+    else if(**c) {
+        rp_expression(c);
+        rp_closure(c);
     }
 }
 
 void rp_expression(const char **c)
 {
-    
+    switch(**c) {
+        case '.':
+
+            break;
+        case '[':
+            while(*++*c != ']') {
+                
+            }
+            break;
+
+    }
 }
 
 void rp_class(const char **c)
