@@ -3,7 +3,18 @@
 #include <string.h>
 #include <stdio.h>
 
+#define INIT_BLOCKSIZE 4
+
 #define rp_error(a) rp_error_(a,sizeof(a))
+
+enum regx_e {
+    REGX_STARTANCHOR  = 0x80,
+    REGX_ENDANCHOR,
+    REGX_WILDCARD,
+    REGX_EPSILON,
+    REGX_BEGINGROUP,
+    REGX_ENDGROUP,
+};
 
 /*
  <start> -> <anchor_start> <expressions> <anchor_end>
@@ -42,7 +53,13 @@ static void rp_union(void);
 static void rp_digits(void);
 static void rp_digit(void);
 
+
+static fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val);
+static void rp_bridge(fsmnode_s *parent, fsmnode_s *child, regx_val_s val);
+static void rp_add_edge(fsmnode_s *parent, fsmedge_s *edge);
+
 static void rp_error_(const char *e, size_t len);
+
 
 regex_s *compile_regex(const char *src)
 {
@@ -81,7 +98,6 @@ void rp_expressions_(void)
     while(*c) {
         if(*c == '|') {
             last = ++c;
-            puts("waahah");
         }
         else
             last = NULL;
@@ -197,6 +213,39 @@ void rp_digit(void)
     
 }
 
+fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val)
+{
+    fsmnode_s *n;
+    
+    n = alloc(sizeof(*n));
+    n->blocksize = INIT_BLOCKSIZE;
+    n->edges = alloc(INIT_BLOCKSIZE * sizeof(*n->edges));
+    n->nedges = 0;
+    rp_bridge(parent, n, val);
+    return n;
+}
+
+void rp_bridge(fsmnode_s *parent, fsmnode_s *child, regx_val_s val)
+{
+    fsmedge_s *e;
+    
+    e = alloc(sizeof(*e));
+    e->val = val;
+    e->parent = parent;
+    e->child = child;
+    rp_add_edge(parent, e);
+}
+
+void rp_add_edge(fsmnode_s *parent, fsmedge_s *edge)
+{
+    parent->nedges++;
+    if(parent->nedges == parent->blocksize) {
+        parent->blocksize *= 2;
+        parent->edges = ralloc(parent->edges, parent->blocksize * sizeof(*parent->edges));
+    }
+    parent->edges[parent->nedges-1] = edge;
+}
+
 void rp_error_(const char *e, size_t len)
 {
 #define prefix "Error: "
@@ -217,9 +266,7 @@ void rp_error_(const char *e, size_t len)
     errptr = err;
     err->next = NULL;
     
-
+    
 #undef previx
 #undef suffix
 }
-
-

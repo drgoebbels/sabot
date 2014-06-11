@@ -3,10 +3,21 @@
 
 #include <stdbool.h>
 
+typedef struct regx_val_s regx_val_s;
+
 typedef struct regex_s regex_s;
 typedef struct fsmedge_s fsmedge_s;
 typedef struct fsmnode_s fsmnode_s;
 typedef struct regerr_s regerr_s;
+
+struct regx_val_s {
+    bool is_scalar;
+    char c;
+    struct {
+        char low;
+        char high;
+    };
+};
 
 struct regex_s
 {
@@ -17,17 +28,16 @@ struct regex_s
 
 struct fsmedge_s
 {
-    bool isclass;
-    union {
-        char c;
-        fsmedge_s *set;
-    };
+    regx_val_s val;
+    fsmnode_s *child;
+    fsmnode_s *parent;
 };
 
 struct fsmnode_s
 {
     unsigned nedges;
-    fsmedge_s edges[];
+    unsigned blocksize;
+    fsmedge_s **edges;
 };
 
 struct regerr_s

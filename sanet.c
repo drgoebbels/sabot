@@ -408,7 +408,7 @@ void connect_thread(connect_inst_s *conn)
                 events.message->type = netgetc(conn);
                 
                 if(events.message->type == 'P') {
-                  //  send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
+                    //send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
                 }
 
                 /* get message content */
@@ -657,7 +657,7 @@ user_s *parse_uname(connect_inst_s *conn)
 
 
 inline void msg_lock(connect_inst_s *conn)
-{    
+{
     pthread_mutex_lock(&conn->chat.lock);
 }
 
