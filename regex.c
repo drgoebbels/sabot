@@ -62,6 +62,7 @@ void rp_start(void)
         c++;
         if(*c) {
             //error
+            rp_error("Inappropriate placement of character end of line anchor");
         }
     }
 }
@@ -78,42 +79,32 @@ void rp_expressions_(void)
     const char *last;
     
     while(*c) {
-        if(*c == '|')
+        if(*c == '|') {
             last = ++c;
+            puts("waahah");
+        }
         else
             last = NULL;
         rp_expression();
+        if(c == last) {
+            rp_error("Inappropriate placement of special character following alternation");
+        }
         switch(*c) {
             case '*':
             case '+':
             case '?':
-                if(last && c == last) {
-                    rp_error("Inappropriate placement of special character following alternation");
-                }
                 c++;
                 break;
             case '{':
-                if(last && c == last) {
-                    rp_error("Inappropriate placement of special character following alternation");
-                }
                 while(*++c != '}');
                 c++;
                 break;
             case ')':
             case '$':
-                if(last && c == last) {
-                    rp_error("Inappropriate placement of special character following alternation");
-                }
                 return;
             default:
-                if(last && c == last) {
-                    rp_error("Inappropriate placement of special character following alternation");
-                }
                 break;
         }
-    }
-    if(last && c == last) {
-        rp_error("Inappropriate placement of special character following alternation");
     }
 }
 
@@ -135,6 +126,7 @@ void rp_expression(void)
                 }
                 break;
             case '(':
+                c++;
                 rp_expression();
                 if(*c == '(') {
                     
