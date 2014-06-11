@@ -37,7 +37,7 @@ static void rp_expression(void);
 static void rp_class(void);
 static void rp_chars(void);
 static void rp_chars_(void);
-static void rp_closure(void);
+static bool rp_closure(void);
 static void rp_union(void);
 static void rp_digits(void);
 static void rp_digit(void);
@@ -78,43 +78,42 @@ void rp_expressions_(void)
     const char *last;
     
     while(*c) {
-        if(*c == '|') {
+        if(*c == '|')
             last = ++c;
-            rp_expression();
-            rp_closure();
-            
-            if(c == last) {
-                switch(*c) {
-                    case ')':
-                        rp_error("Inappropriate placement of close parenthesis following alternation");
-                        break;
-                    case '|':
-                        rp_error("Inappropriate placement of alternation following alternation");
-                        break;
-                    case '*':
-                        rp_error("Inappropriate placement of kleene star closure following alternation");
-                        break;
-                    case '+':
-                        rp_error("Inappropriate placement of positive closure following alternation");
-                        break;
-                    case '?':
-                        rp_error("Inappropriate placement of '?' following alternation");
-                        break;
-                    case '{':
-                        rp_error("Inappropriate placement of '{' following alternation");
-                        break;
-                    case '$':
-                        rp_error("Inappropriate placement of 'end of line' following alternation");
-                        break;
-                    default:
-                        break;
+        else
+            last = NULL;
+        rp_expression();
+        switch(*c) {
+            case '*':
+            case '+':
+            case '?':
+                if(last && c == last) {
+                    rp_error("Inappropriate placement of special character following alternation");
                 }
-            }
+                c++;
+                break;
+            case '{':
+                if(last && c == last) {
+                    rp_error("Inappropriate placement of special character following alternation");
+                }
+                while(*++c != '}');
+                c++;
+                break;
+            case ')':
+            case '$':
+                if(last && c == last) {
+                    rp_error("Inappropriate placement of special character following alternation");
+                }
+                return;
+            default:
+                if(last && c == last) {
+                    rp_error("Inappropriate placement of special character following alternation");
+                }
+                break;
         }
-        else if(*c) {
-            rp_expression();
-            rp_closure();
-        }
+    }
+    if(last && c == last) {
+        rp_error("Inappropriate placement of special character following alternation");
     }
 }
 
@@ -178,19 +177,17 @@ void rp_chars_(void)
     
 }
 
-void rp_closure(void)
+bool rp_closure(void)
 {
     switch(*c) {
         case '*':
-            break;
         case '+':
-            break;
         case '?':
-            break;
+        case '{':
+            return true;
         default:
-            break;
+            return false;
     }
-    c++;
 }
 
 void rp_union(void)
