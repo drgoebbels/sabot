@@ -42,10 +42,10 @@ static const char *c;
 static regerr_s *errptr;
 
 static void rp_start(void);
-static void rp_expressions(void);
-static void rp_expressions_(void);
-static void rp_expression(void);
-static void rp_class(void);
+static void rp_expressions(nfa_s *nfa);
+static void rp_expressions_(nfa_s *nfa);
+static void rp_expression(nfa_s *nfa);
+static void rp_class(nfa_s *nfa);
 static void rp_chars(void);
 static void rp_chars_(void);
 static bool rp_closure(void);
@@ -73,14 +73,16 @@ regex_s *compile_regex(const char *src)
 
 void rp_start(void)
 {
-    fsmnode_s *s;
-
-    s = fsmnode_s_();
+    nfa_s *nfa;
+    
+    nfa = alloc(sizeof(*nfa));
+    nfa->start = fsmnode_s_();
+    nfa->final = nfa->start;
     
     if(*c == '^') {
         c++;
     }
-    rp_expressions();
+    rp_expressions(nfa);
     if(*c == '$') {
         c++;
         if(*c) {
@@ -88,43 +90,21 @@ void rp_start(void)
             rp_error("Inappropriate placement of character end of line anchor");
         }
     }
+    if(*c) {
+        rp_error("Invalid placement of special character");
+    }
 }
 
-void rp_expressions(void)
+void rp_expressions(nfa_s *nfa)
 {
-    rp_expression();
+    rp_expression(nfa);
     rp_closure();
-    rp_expressions_();
+    rp_expressions_(nfa);
 }
 
-void rp_expressions_(void)
+void rp_expressions_(nfa_s *nfa)
 {
     const char *last;
-    
-    if(*c == '|') {
-        rp_error("Empty subexpression");
-    }
-    
-    switch(*c) {
-        case '*':
-        case '+':
-        case '?':
-        case '{':
-            c++;
-            break;
-        case '}':
-            rp_error("Unbalanced braces");
-            c++;
-            break;
-        case ')':
-            rp_error("Unbalanced parenthesis");
-            c++;
-            break;
-        case '|':
-            rp_error("Empty subexpression");
-            c++;
-            break;
-    }
     
     while(*c) {
         if(*c == '|') {
@@ -132,7 +112,7 @@ void rp_expressions_(void)
         }
         else
             last = NULL;
-        rp_expression();
+        rp_expression(nfa);
         if(c == last) {
             rp_error("Inappropriate placement of special character following alternation");
         }
@@ -149,37 +129,37 @@ void rp_expressions_(void)
             case ')':
             case '$':
                 return;
-            default:
-                break;
         }
     }
 }
 
-void rp_expression(void)
+void rp_expression(nfa_s *nfa)
 {
+    regx_val_s val;
+    
     while(*c) {
         switch(*c) {
             case '.':
-                
+                val.c = REGX_WILDCARD;
+                val.is_scalar = true;
+                nfa->final = rp_makenode(nfa->final, val);
                 break;
             case '[':
-                while(*c++ != ']') {
-                    if(!*c) {
-                        rp_error("Premature nul character");
-                    }
-                    else {
-                        
-                    }
-                }
+                rp_class(nfa);
                 break;
             case '(':
                 c++;
-                rp_expression();
-                if(*c == '(') {
-                    
+                val.c = REGX_BEGINGROUP;
+                val.is_scalar = true;
+                nfa->final = rp_makenode(nfa->final, val);
+                rp_expressions(nfa);
+                if(*c == ')') {
+                    val.c = REGX_ENDGROUP;
+                    val.is_scalar = true;
+                    nfa->final = rp_makenode(nfa->final, val);
                 }
                 else {
-                    
+                    rp_error("Unbalanced Parenthesis");
                 }
                 break;
             case '\\':
@@ -201,9 +181,20 @@ void rp_expression(void)
     }
 }
 
-void rp_class(void)
+void rp_class(nfa_s *nfa)
 {
-    
+    while(*++c != ']') {
+        if(!*c) {
+            rp_error("Unbalanced ']'");
+            break;
+        }
+        else if(*c == '[') {
+            rp_class(nfa);
+        }
+        else {
+            
+        }
+    }
 }
 
 void rp_chars(void)
@@ -288,14 +279,14 @@ void rp_add_edge(fsmnode_s *parent, fsmedge_s *edge)
 
 void rp_error_(const char *e, size_t len)
 {
-#define rp_error_prefix "Error: "
-#define rp_error_suffix " At char %c."
+#define RP_ERROR_PREFIX "Error: "
+#define RP_ERROR_SUFFIX " At char %c."
     
     regerr_s *err;
     
-    err = alloc(sizeof(*err) + sizeof(rp_error_prefix) + sizeof(rp_error_suffix) + strlen(e) - 1);
+    err = alloc(sizeof(*err) + sizeof(RP_ERROR_PREFIX) + sizeof(RP_ERROR_SUFFIX) + strlen(e) - 1);
     err->pos = e - start;
-    sprintf(err->msg, rp_error_prefix "%s" rp_error_suffix, e, *c);
+    sprintf(err->msg, RP_ERROR_PREFIX "%s" RP_ERROR_SUFFIX, e, *c);
     
     fprintf(stderr, "%s\n", err->msg);
     
@@ -307,6 +298,6 @@ void rp_error_(const char *e, size_t len)
     err->next = NULL;
     
     
-#undef rp_error_previx
-#undef rp_error_suffix
+#undef RP_ERROR_PREFIX
+#undef RP_ERROR_SUFFIX
 }
