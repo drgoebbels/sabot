@@ -9,6 +9,7 @@ typedef struct regex_s regex_s;
 typedef struct fsmedge_s fsmedge_s;
 typedef struct fsmnode_s fsmnode_s;
 typedef struct regerr_s regerr_s;
+typedef struct nfa_s nfa_s;
 
 struct regx_val_s {
     bool is_scalar;
@@ -23,7 +24,7 @@ struct regex_s
 {
     bool isnfa;
     regerr_s *err;
-    fsmnode_s *start;
+    nfa_s *nfa;
 };
 
 struct fsmedge_s
@@ -45,6 +46,12 @@ struct regerr_s
     regerr_s *next;
     unsigned short pos;
     char msg[];
+};
+
+struct nfa_s
+{
+    fsmnode_s *start;
+    fsmnode_s *final;
 };
 
 extern regex_s *compile_regex(const char *src);

@@ -54,7 +54,9 @@ static void rp_digits(void);
 static void rp_digit(void);
 
 
+
 static fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val);
+static inline fsmnode_s *fsmnode_s_(void);
 static void rp_bridge(fsmnode_s *parent, fsmnode_s *child, regx_val_s val);
 static void rp_add_edge(fsmnode_s *parent, fsmedge_s *edge);
 
@@ -71,6 +73,10 @@ regex_s *compile_regex(const char *src)
 
 void rp_start(void)
 {
+    fsmnode_s *s;
+
+    s = fsmnode_s_();
+    
     if(*c == '^') {
         c++;
     }
@@ -94,6 +100,31 @@ void rp_expressions(void)
 void rp_expressions_(void)
 {
     const char *last;
+    
+    if(*c == '|') {
+        rp_error("Empty subexpression");
+    }
+    
+    switch(*c) {
+        case '*':
+        case '+':
+        case '?':
+        case '{':
+            c++;
+            break;
+        case '}':
+            rp_error("Unbalanced braces");
+            c++;
+            break;
+        case ')':
+            rp_error("Unbalanced parenthesis");
+            c++;
+            break;
+        case '|':
+            rp_error("Empty subexpression");
+            c++;
+            break;
+    }
     
     while(*c) {
         if(*c == '|') {
@@ -217,13 +248,22 @@ fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val)
 {
     fsmnode_s *n;
     
+    n = fsmnode_s_();
+    rp_bridge(parent, n, val);
+    return n;
+}
+
+fsmnode_s *fsmnode_s_(void)
+{
+    fsmnode_s *n;
+    
     n = alloc(sizeof(*n));
     n->blocksize = INIT_BLOCKSIZE;
     n->edges = alloc(INIT_BLOCKSIZE * sizeof(*n->edges));
     n->nedges = 0;
-    rp_bridge(parent, n, val);
     return n;
 }
+
 
 void rp_bridge(fsmnode_s *parent, fsmnode_s *child, regx_val_s val)
 {
@@ -248,14 +288,14 @@ void rp_add_edge(fsmnode_s *parent, fsmedge_s *edge)
 
 void rp_error_(const char *e, size_t len)
 {
-#define prefix "Error: "
-#define suffix " At char %c."
+#define rp_error_prefix "Error: "
+#define rp_error_suffix " At char %c."
     
     regerr_s *err;
     
-    err = alloc(sizeof(*err) + sizeof(prefix) + sizeof(suffix) + strlen(e) - 1);
+    err = alloc(sizeof(*err) + sizeof(rp_error_prefix) + sizeof(rp_error_suffix) + strlen(e) - 1);
     err->pos = e - start;
-    sprintf(err->msg, "%s" suffix, e, *c);
+    sprintf(err->msg, rp_error_prefix "%s" rp_error_suffix, e, *c);
     
     fprintf(stderr, "%s\n", err->msg);
     
@@ -267,6 +307,6 @@ void rp_error_(const char *e, size_t len)
     err->next = NULL;
     
     
-#undef previx
-#undef suffix
+#undef rp_error_previx
+#undef rp_error_suffix
 }
