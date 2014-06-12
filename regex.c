@@ -164,7 +164,6 @@ nfa_s *rp_expression(void)
                 c++;
                 subexp = rp_expressions();
                 if(*c == ')') {
-                    val.is_scalar = true;
                     val.c = REGX_BEGINGROUP;
                     rp_bridge(nfa->final, subexp->start, val);
                     nfa->final = subexp->final;
@@ -193,8 +192,10 @@ nfa_s *rp_expression(void)
                 c++;
                 break;
             case '{':
+                val.is_scalar = false;
                 while(*++c != '}');
                 c++;
+                val.is_scalar = true;
                 break;
             case ')':
             case '|':
