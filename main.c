@@ -18,7 +18,7 @@ int main(int arc, char *argv[])
     aes_digest_s *tmp;
     
     
-    compile_regex("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,4}$");
+    compile_regex("^(a|b)[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,4}$");
     
     return 0;
     print_aesdigest(tmp = aes_encrypt(clear, sizeof(clear)-1, key));

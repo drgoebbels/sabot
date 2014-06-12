@@ -51,13 +51,8 @@ static nfa_s *rp_expressions();
 static void rp_expressions_(nfa_s *nfa);
 static nfa_s *rp_expression(void);
 static void rp_class(nfa_s *nfa);
-static void rp_chars(void);
-static void rp_chars_(void);
 static bool rp_closure(void);
 static void rp_union(void);
-static void rp_digits(void);
-static void rp_digit(void);
-
 
 
 static fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val);
@@ -111,34 +106,33 @@ nfa_s *rp_expressions(void)
 void rp_expressions_(nfa_s *nfa)
 {
     nfa_s *subexp;
+    regx_val_s val;
+    fsmnode_s *u1, *u2;
     const char *last;
     
-    while(*c) {
+    while(*c && *c != ')') {
         if(*c == '|') {
             last = ++c;
         }
         else
             last = NULL;
         subexp = rp_expression();
-        if(c == last) {
-            rp_error("Inappropriate placement of special character following alternation");
-        }
-        switch(*c) {
-            case '*':
-            case '+':
-            case '?':
-                c++;
-                break;
-            case '{':
-                while(*++c != '}');
-                c++;
-                break;
-            case ')':
-            case '$':
-                return;
-        }
         if(last) {
-            
+            if(c != last) {
+                val.c = REGX_EPSILON;
+                val.is_scalar = true;
+                u1 = fsmnode_s_();
+                u2 = fsmnode_s_();
+                rp_bridge(u1, nfa->start, val);
+                rp_bridge(u1, subexp->start, val);
+                rp_bridge(nfa->final, u2, val);
+                rp_bridge(subexp->final, u2, val);
+                nfa->start = u1;
+                nfa->final = u2;
+            }
+            else {
+                rp_error("Inappropriate placement of special character following alternation");
+            }
         }
     }
 }
@@ -180,12 +174,17 @@ nfa_s *rp_expression(void)
                 val.c = *c;
                 nfa->final = rp_makenode(nfa->final, val);
                 break;
-            case ')':
-            case '|':
             case '*':
             case '+':
             case '?':
+                c++;
+                break;
             case '{':
+                while(*++c != '}');
+                c++;
+                break;
+            case ')':
+            case '|':
             case '$':
                 return nfa;
             default:
@@ -214,15 +213,6 @@ void rp_class(nfa_s *nfa)
     }
 }
 
-void rp_chars(void)
-{
-    
-}
-
-void rp_chars_(void)
-{
-    
-}
 
 bool rp_closure(void)
 {
@@ -235,21 +225,6 @@ bool rp_closure(void)
         default:
             return false;
     }
-}
-
-void rp_union(void)
-{
-    
-}
-
-void rp_digits(void)
-{
-    
-}
-
-void rp_digit(void)
-{
-    
 }
 
 fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val)
