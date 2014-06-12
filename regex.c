@@ -110,7 +110,7 @@ void rp_expressions_(nfa_s *nfa)
     fsmnode_s *u1, *u2;
     const char *last;
     
-    while(*c && *c != ')') {
+    while(*c && *c != ')' && *c != '$') {
         if(*c == '|') {
             last = ++c;
         }
@@ -145,8 +145,8 @@ nfa_s *rp_expression(void)
     regx_val_s val;
     
     nfa = alloc(sizeof(*nfa));
-    nfa->start = fsmnode_s_();
-    nfa->final = nfa->start;
+    vnfa.start = nfa->start = fsmnode_s_();
+    vnfa.final = nfa->final = nfa->start;
     
     val.is_scalar = true;
     while(*c) {
@@ -169,12 +169,12 @@ nfa_s *rp_expression(void)
                     nfa->final = subexp->final;
                     val.c = REGX_ENDGROUP;
                     nfa->final = rp_makenode(nfa->final, val);
+                    vnfa.final = nfa->final;
                 }
                 else {
                     rp_error("Unbalanced Parenthesis");
                 }
                 free(subexp);
-                vnfa.final = nfa->final;
                 break;
             case '\\':
                 c++;
@@ -185,20 +185,16 @@ nfa_s *rp_expression(void)
                 val.c = REGX_EPSILON;
                 rp_bridge(vnfa.start, vnfa.final, val);
                 rp_bridge(vnfa.final, vnfa.start, val);
-                c++;
                 break;
             case '+':
                 rp_bridge(vnfa.final, vnfa.start, val);
-                c++;
                 break;
             case '?':
                 rp_bridge(vnfa.start, vnfa.final, val);
-                c++;
                 break;
             case '{':
                 val.is_scalar = false;
                 while(*++c != '}');
-                c++;
                 val.is_scalar = true;
                 break;
             case ')':
