@@ -182,13 +182,17 @@ nfa_s *rp_expression(void)
                 nfa->final = rp_makenode(nfa->final, val);
                 break;
             case '*':
-                
+                val.c = REGX_EPSILON;
+                rp_bridge(vnfa.start, vnfa.final, val);
+                rp_bridge(vnfa.final, vnfa.start, val);
                 c++;
                 break;
             case '+':
+                rp_bridge(vnfa.final, vnfa.start, val);
                 c++;
                 break;
             case '?':
+                rp_bridge(vnfa.start, vnfa.final, val);
                 c++;
                 break;
             case '{':
