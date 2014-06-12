@@ -276,7 +276,7 @@ void rp_error_(const char *e, size_t len)
     
     regerr_s *err;
     
-    err = alloc(sizeof(*err) + sizeof(RP_ERROR_PREFIX) + sizeof(RP_ERROR_SUFFIX) + strlen(e) - 1);
+    err = alloc(sizeof(*err) + sizeof(RP_ERROR_PREFIX) + sizeof(RP_ERROR_SUFFIX) + len - 2);
     err->pos = e - start;
     sprintf(err->msg, RP_ERROR_PREFIX "%s" RP_ERROR_SUFFIX, e, *c);
     
