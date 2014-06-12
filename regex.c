@@ -1,3 +1,8 @@
+/*
+ Implementation of Regex parser via NFA using Thompson's Construction Algorithm
+ Possible Goal: Implement option to convert to DFA
+ */
+
 #include "regex.h"
 #include "general.h"
 #include <string.h>
@@ -42,9 +47,9 @@ static const char *c;
 static regerr_s *errptr;
 
 static void rp_start(void);
-static void rp_expressions(nfa_s *nfa);
+static nfa_s *rp_expressions();
 static void rp_expressions_(nfa_s *nfa);
-static void rp_expression(nfa_s *nfa);
+static nfa_s *rp_expression(void);
 static void rp_class(nfa_s *nfa);
 static void rp_chars(void);
 static void rp_chars_(void);
@@ -75,14 +80,11 @@ void rp_start(void)
 {
     nfa_s *nfa;
     
-    nfa = alloc(sizeof(*nfa));
-    nfa->start = fsmnode_s_();
-    nfa->final = nfa->start;
     
     if(*c == '^') {
         c++;
     }
-    rp_expressions(nfa);
+    nfa = rp_expressions();
     if(*c == '$') {
         c++;
         if(*c) {
@@ -95,15 +97,20 @@ void rp_start(void)
     }
 }
 
-void rp_expressions(nfa_s *nfa)
+nfa_s *rp_expressions(void)
 {
-    rp_expression(nfa);
+    nfa_s *nfa;
+    
+    nfa = rp_expression();
     rp_closure();
     rp_expressions_(nfa);
+    
+    return nfa;
 }
 
 void rp_expressions_(nfa_s *nfa)
 {
+    nfa_s *subexp;
     const char *last;
     
     while(*c) {
@@ -112,7 +119,7 @@ void rp_expressions_(nfa_s *nfa)
         }
         else
             last = NULL;
-        rp_expression(nfa);
+        subexp = rp_expression();
         if(c == last) {
             rp_error("Inappropriate placement of special character following alternation");
         }
@@ -130,18 +137,26 @@ void rp_expressions_(nfa_s *nfa)
             case '$':
                 return;
         }
+        if(last) {
+            
+        }
     }
 }
 
-void rp_expression(nfa_s *nfa)
+nfa_s *rp_expression(void)
 {
+    nfa_s *nfa, *subexp;
     regx_val_s val;
     
+    nfa = alloc(sizeof(*nfa));
+    nfa->start = fsmnode_s_();
+    nfa->final = nfa->start;
+    
+    val.is_scalar = true;
     while(*c) {
         switch(*c) {
             case '.':
                 val.c = REGX_WILDCARD;
-                val.is_scalar = true;
                 nfa->final = rp_makenode(nfa->final, val);
                 break;
             case '[':
@@ -150,12 +165,10 @@ void rp_expression(nfa_s *nfa)
             case '(':
                 c++;
                 val.c = REGX_BEGINGROUP;
-                val.is_scalar = true;
                 nfa->final = rp_makenode(nfa->final, val);
-                rp_expressions(nfa);
+                subexp = rp_expressions();
                 if(*c == ')') {
                     val.c = REGX_ENDGROUP;
-                    val.is_scalar = true;
                     nfa->final = rp_makenode(nfa->final, val);
                 }
                 else {
@@ -164,7 +177,8 @@ void rp_expression(nfa_s *nfa)
                 break;
             case '\\':
                 c++;
-                
+                val.c = *c;
+                nfa->final = rp_makenode(nfa->final, val);
                 break;
             case ')':
             case '|':
@@ -173,12 +187,15 @@ void rp_expression(nfa_s *nfa)
             case '?':
             case '{':
             case '$':
-                return;
+                return nfa;
             default:
+                val.c = *c;
+                nfa->final = rp_makenode(nfa->final, val);
                 break;
         }
         c++;
     }
+    return nfa;
 }
 
 void rp_class(nfa_s *nfa)

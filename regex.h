@@ -13,10 +13,12 @@ typedef struct nfa_s nfa_s;
 
 struct regx_val_s {
     bool is_scalar;
-    char c;
-    struct {
-        char low;
-        char high;
+    union {
+        char c;
+        struct {
+            char low;
+            char high;
+        };
     };
 };
 
