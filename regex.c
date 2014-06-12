@@ -162,9 +162,10 @@ nfa_s *rp_expression(void)
                 break;
             case '(':
                 c++;
-                val.c = REGX_BEGINGROUP;
                 subexp = rp_expressions();
                 if(*c == ')') {
+                    val.is_scalar = true;
+                    val.c = REGX_BEGINGROUP;
                     rp_bridge(nfa->final, subexp->start, val);
                     nfa->final = subexp->final;
                     val.c = REGX_ENDGROUP;
