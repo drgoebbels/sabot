@@ -129,6 +129,7 @@ void rp_expressions_(nfa_s *nfa)
                 rp_bridge(subexp->final, u2, val);
                 nfa->start = u1;
                 nfa->final = u2;
+                free(subexp);
             }
             else {
                 rp_error("Inappropriate placement of special character following alternation");
@@ -139,6 +140,7 @@ void rp_expressions_(nfa_s *nfa)
 
 nfa_s *rp_expression(void)
 {
+    nfa_s vnfa;
     nfa_s *nfa, *subexp;
     regx_val_s val;
     
@@ -151,7 +153,9 @@ nfa_s *rp_expression(void)
         switch(*c) {
             case '.':
                 val.c = REGX_WILDCARD;
+                vnfa.start = nfa->final;
                 nfa->final = rp_makenode(nfa->final, val);
+                vnfa.final = nfa->final;
                 break;
             case '[':
                 rp_class(nfa);
@@ -159,15 +163,18 @@ nfa_s *rp_expression(void)
             case '(':
                 c++;
                 val.c = REGX_BEGINGROUP;
-                nfa->final = rp_makenode(nfa->final, val);
                 subexp = rp_expressions();
                 if(*c == ')') {
+                    rp_bridge(nfa->final, subexp->start, val);
+                    nfa->final = subexp->final;
                     val.c = REGX_ENDGROUP;
                     nfa->final = rp_makenode(nfa->final, val);
                 }
                 else {
                     rp_error("Unbalanced Parenthesis");
                 }
+                free(subexp);
+                vnfa.final = nfa->final;
                 break;
             case '\\':
                 c++;
@@ -175,7 +182,12 @@ nfa_s *rp_expression(void)
                 nfa->final = rp_makenode(nfa->final, val);
                 break;
             case '*':
+                
+                c++;
+                break;
             case '+':
+                c++;
+                break;
             case '?':
                 c++;
                 break;
