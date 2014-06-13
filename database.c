@@ -84,109 +84,112 @@ void db_init(const char *name)
 
 void dbadd_user_record(user_s *user, const char *server, time_t enter)
 {
+    size_t len;
     sqlite3_int64 id = -1, sid = -1;
     int status, type, icol = 0;
-    size_t len = strlen(user->name);
 
-    //sem_wait()
-    status = sqlite3_bind_text(sql_getid, 1, user->name, len, SQLITE_STATIC);
-    if(status == SQLITE_OK) {
-        while((status = sqlite3_step(sql_getid)) != SQLITE_DONE) {
-            if(status == SQLITE_ROW) {
-                type = sqlite3_column_type(sql_getid, icol);
-                if(type == SQLITE_INTEGER)
-                    id = sqlite3_column_int64(sql_getid, icol);
-                icol++;
-            }
-            else if (status == SQLITE_ERROR) {
-                fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
-                break;
-            }
-            else {
-                //...
-            }
-        }
-        sqlite3_reset(sql_getid);
-        sqlite3_clear_bindings(sql_getid);
-
-        if(id == -1) {
-            status = sqlite3_bind_text(sql_insert_usr, 1, user->name, len, SQLITE_STATIC);
-            if(status == SQLITE_OK) {
-                do {
-                    status = sqlite3_step(sql_insert_usr);
-                    if(status == SQLITE_ERROR) {
-                        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
-                        sqlite3_reset(sql_insert_usr);
-                        sqlite3_clear_bindings(sql_insert_usr);
-                        return;
-                    }
-                }
-                while(status != SQLITE_DONE);
-
-                id = sqlite3_last_insert_rowid(db_handle);
-                sqlite3_reset(sql_insert_usr);
-                sqlite3_clear_bindings(sql_insert_usr);
-            }
-        }
-
-        user->user = id;
-        status = sqlite3_bind_text(sql_getsid, 1, server, strlen(server), SQLITE_STATIC);
+    if(!UNAME_IS_ERROR(user->name)) {
+        len = strlen(user->name);
+        //sem_wait()
+        status = sqlite3_bind_text(sql_getid, 1, user->name, (int)len, SQLITE_STATIC);
         if(status == SQLITE_OK) {
-            icol = 0;
-            while((status = sqlite3_step(sql_getsid)) != SQLITE_DONE) {
+            while((status = sqlite3_step(sql_getid)) != SQLITE_DONE) {
                 if(status == SQLITE_ROW) {
-                    type = sqlite3_column_type(sql_getsid, icol);
+                    type = sqlite3_column_type(sql_getid, icol);
                     if(type == SQLITE_INTEGER)
-                        sid = sqlite3_column_int64(sql_getsid, icol);
+                        id = sqlite3_column_int64(sql_getid, icol);
                     icol++;
                 }
                 else if (status == SQLITE_ERROR) {
                     fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                    break;
                 }
                 else {
-                    //printf("type: %d\n",)
                     //...
                 }
             }
-        }
-        if(sid > 0) {
-            sqlite3_bind_int64(sql_insert_login, 1, id);
-            sqlite3_bind_text(sql_insert_login, 2, user->id, 3, SQLITE_STATIC);
-            sqlite3_bind_int64(sql_insert_login, 3, sid);
-            sqlite3_bind_int(sql_insert_login, 4, (int)enter);
-
-            do {
-                status = sqlite3_step(sql_insert_login);
-                if(status == SQLITE_ERROR) {
-                    fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
-                    break;
+            sqlite3_reset(sql_getid);
+            sqlite3_clear_bindings(sql_getid);
+            
+            if(id == -1) {
+                status = sqlite3_bind_text(sql_insert_usr, 1, user->name, (int)len, SQLITE_STATIC);
+                if(status == SQLITE_OK) {
+                    do {
+                        status = sqlite3_step(sql_insert_usr);
+                        if(status == SQLITE_ERROR) {
+                            fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                            sqlite3_reset(sql_insert_usr);
+                            sqlite3_clear_bindings(sql_insert_usr);
+                            return;
+                        }
+                    }
+                    while(status != SQLITE_DONE);
+                    
+                    id = sqlite3_last_insert_rowid(db_handle);
+                    sqlite3_reset(sql_insert_usr);
+                    sqlite3_clear_bindings(sql_insert_usr);
                 }
             }
-            while(status != SQLITE_DONE);
-
-            if(status != SQLITE_ERROR)
-                user->login = sqlite3_last_insert_rowid(db_handle);
-            sqlite3_reset(sql_insert_login);
-            sqlite3_clear_bindings(sql_insert_login);
+            
+            user->user = id;
+            status = sqlite3_bind_text(sql_getsid, 1, server, (int)strlen(server), SQLITE_STATIC);
+            if(status == SQLITE_OK) {
+                icol = 0;
+                while((status = sqlite3_step(sql_getsid)) != SQLITE_DONE) {
+                    if(status == SQLITE_ROW) {
+                        type = sqlite3_column_type(sql_getsid, icol);
+                        if(type == SQLITE_INTEGER)
+                            sid = sqlite3_column_int64(sql_getsid, icol);
+                        icol++;
+                    }
+                    else if (status == SQLITE_ERROR) {
+                        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                    }
+                    else {
+                        //printf("type: %d\n",)
+                        //...
+                    }
+                }
+            }
+            if(sid > 0) {
+                sqlite3_bind_int64(sql_insert_login, 1, id);
+                sqlite3_bind_text(sql_insert_login, 2, user->id, 3, SQLITE_STATIC);
+                sqlite3_bind_int64(sql_insert_login, 3, sid);
+                sqlite3_bind_int(sql_insert_login, 4, (int)enter);
+                
+                do {
+                    status = sqlite3_step(sql_insert_login);
+                    if(status == SQLITE_ERROR) {
+                        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
+                        break;
+                    }
+                }
+                while(status != SQLITE_DONE);
+                
+                if(status != SQLITE_ERROR)
+                    user->login = sqlite3_last_insert_rowid(db_handle);
+                sqlite3_reset(sql_insert_login);
+                sqlite3_clear_bindings(sql_insert_login);
+            }
+            else {
+                perror("Database Error reading server primary key");
+            }
+            sqlite3_reset(sql_getsid);
+            sqlite3_clear_bindings(sql_getsid);
         }
-        else {
-            perror("Database Error reading server primary key");
+        else {        
+            fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
         }
-        sqlite3_reset(sql_getsid);
-        sqlite3_clear_bindings(sql_getsid);
+        sqlite3_reset(sql_getid);
+        sqlite3_clear_bindings(sql_getid);
     }
-    else {        
-        fprintf(stderr, "%s\n", sqlite3_errmsg(db_handle));
-    }
-    sqlite3_reset(sql_getid);
-    sqlite3_clear_bindings(sql_getid);
 }
 
 void dblog_message(message_s *msg)
 {
     int status;
 
-    sqlite3_bind_text(sql_insert_msg, 1, msg->text, msg->len, SQLITE_STATIC);
+    sqlite3_bind_text(sql_insert_msg, 1, msg->text, (int)msg->len, SQLITE_STATIC);
     sqlite3_bind_int(sql_insert_msg, 2, msg->type);
     sqlite3_bind_int64(sql_insert_msg, 3, msg->base.user->login);
     sqlite3_bind_int64(sql_insert_msg, 4, msg->base.timestamp);

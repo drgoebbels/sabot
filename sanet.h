@@ -31,6 +31,8 @@ extern "C" {
 #define MAX_UNAME_PASS 20
 #define UID_TABLE_SIZE 53
 
+#define ERROR_USER_NAME "_%ERR%_"
+#define UNAME_IS_ERROR(a) (*(uint64_t *)a == *(uint64_t *)ERROR_USER_NAME)
     
 enum event_types_e {
     EVENT_CHAT_MSG,
@@ -54,7 +56,6 @@ typedef struct user_s user_s;
 typedef struct uid_record_s uid_record_s;
 typedef struct uid_hash_s uid_hash_s;
 typedef struct gamelist_s gamelist_s;
-
 
 struct chatbox_s
 {

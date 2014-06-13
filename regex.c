@@ -187,9 +187,11 @@ nfa_s *rp_expression(void)
                 rp_bridge(vnfa.final, vnfa.start, val);
                 break;
             case '+':
+                val.c = REGX_EPSILON;
                 rp_bridge(vnfa.final, vnfa.start, val);
                 break;
             case '?':
+                val.c = REGX_EPSILON;
                 rp_bridge(vnfa.start, vnfa.final, val);
                 break;
             case '{':

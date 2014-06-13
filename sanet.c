@@ -63,7 +63,10 @@ static char finish_login[] = {
     0x30, 0x33, 0x5f, 0x00
 };
 
-//{exp} -> {send "you suck"}
+
+static user_s err_user = {
+    .name = ERROR_USER_NAME
+};
 
 static bool check_login(const char *server, const char *uname, const char *pass);
 static int connect_(const char *server);
@@ -400,8 +403,8 @@ void connect_thread(connect_inst_s *conn)
                 *lex = '\0';
                 
                 u = userlookup(lexbuf);
-                if(u)
-                    events.message->base.user = u;
+                
+                events.message->base.user = u;
                 events.message->base.type = EVENT_CHAT_MSG;
                 events.message->base.timestamp = timestamp;
                 /* get type of message */
@@ -434,21 +437,19 @@ void connect_thread(connect_inst_s *conn)
                 *lex = '\0';
                 
                 u = userlookup(lexbuf);
-                if(u) {
-                    events.edit = alloc(sizeof(*events.edit));
-                    events.edit->base.user = u;
-                    events.edit->base.timestamp = timestamp;
-                    events.edit->base.type = EVENT_EDIT_USERS;
-                    events.edit->add = false;
-                    pthread_mutex_lock(&conn->chat.lock);
-                    event_enqueue(conn, events.event);
-                    pthread_mutex_unlock(&conn->chat.lock);
-                    
-                    pthread_mutex_lock(&monitor.lock);
-                    pthread_cond_signal(&monitor.cond);
-                    pthread_mutex_unlock(&monitor.lock);
-                    deleteuser(lexbuf);
-                }
+                events.edit = alloc(sizeof(*events.edit));
+                events.edit->base.user = u;
+                events.edit->base.timestamp = timestamp;
+                events.edit->base.type = EVENT_EDIT_USERS;
+                events.edit->add = false;
+                pthread_mutex_lock(&conn->chat.lock);
+                event_enqueue(conn, events.event);
+                pthread_mutex_unlock(&conn->chat.lock);
+                
+                pthread_mutex_lock(&monitor.lock);
+                pthread_cond_signal(&monitor.cond);
+                pthread_mutex_unlock(&monitor.lock);
+                deleteuser(lexbuf);
                 netgetc(conn);
                 break;
             default:
@@ -786,9 +787,8 @@ user_s *userlookup(char *uid)
             return rec->user;
         rec = rec->next;
     }
-    puts("ERROR");
-    printf("Tried to look up %s\n\n", uid);
-    return NULL;
+    fprintf(stderr, "Error: Tried to look up %s\n\n", uid);
+    return &err_user;
 }
 
 void deleteuser(char *uid)
