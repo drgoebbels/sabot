@@ -34,6 +34,8 @@ extern "C" {
 #define ERROR_USER_NAME "_%ERR%_"
 #define UNAME_IS_ERROR(a) (*(uint64_t *)a == *(uint64_t *)ERROR_USER_NAME)
     
+#define SPAM_DETECT_WINDOW 5
+    
 enum event_types_e {
     EVENT_CHAT_MSG,
     EVENT_EDIT_USERS,
@@ -158,6 +160,10 @@ struct user_s
     char field6[32];
     char mod_level;
 
+    time_t msglast;
+    uint8_t spamcount;
+    message_s *prev;
+    
     /*database table keys */
     int64_t user;
     int64_t login;

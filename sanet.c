@@ -86,6 +86,8 @@ static void print_user(user_s *s);
 static void printstr_n(char *str, size_t size);
 static inline void traffic_log(int c);
 
+static bool spam_check(message_s *msg);
+
 static uint16_t uid_hash(char *uid);
 
 void sanet_init(void)
@@ -422,6 +424,10 @@ void connect_thread(connect_inst_s *conn)
 
                 chptr = &conn->chat;
                 
+                if(spam_check(events.message)) {
+                    fprintf(stderr, "SPAM DETECTED!\m");
+                }
+                
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
                 pthread_mutex_unlock(&chptr->lock);
@@ -540,6 +546,19 @@ int netgetc(connect_inst_s *s)
     return s->buf[s->i++];
 }
 
+bool spam_check(message_s *msg)
+{
+    user_s *u = msg->base.user;
+    
+    if(u->prev) {
+        
+        free(u->prev);
+    }
+    u->prev = msg;
+    return false;
+}
+
+
 void print_user(user_s *s)
 {
     printf("user: %s %s %s %s %s %s %s %s %c\n",
@@ -649,6 +668,9 @@ user_s *parse_uname(connect_inst_s *conn)
     *lex = '\0';
         
     u->mod_level = netgetc(conn);
+    
+    u->spamcount = 0;
+    u->prev = NULL;
     
     u->login = -1;
     u->user = -1;

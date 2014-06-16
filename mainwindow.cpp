@@ -188,6 +188,7 @@ void MainWindow::editUsers(edit_users_s *edit)
     }
     list->addItem(message.c_str());
     list->scrollToBottom();
+    free(edit);
 }
 
 void MainWindow::editGamesSlot(edit_games_s *game)

@@ -40,6 +40,7 @@ void db_init(const char *name)
     static const char getsid[] = "SELECT id FROM server WHERE ip=?;";
     static const char insert_login[] = "INSERT INTO login(user,handle,server,enter) VALUES(?,?,?,?);";
     static const char insert_msg[] = "INSERT INTO message(body,type,sender,time) VALUES(?,?,?,?);";
+    
     if(!db_handle) {
         status = sqlite3_open_v2(
                     name,
@@ -107,7 +108,7 @@ void dbadd_user_record(user_s *user, const char *server, time_t enter)
                 else {
                     //...
                 }
-            }
+            } 
             sqlite3_reset(sql_getid);
             sqlite3_clear_bindings(sql_getid);
             
