@@ -160,7 +160,6 @@ struct user_s
     char field6[32];
     char mod_level;
 
-    time_t msglast;
     uint8_t spamcount;
     message_s *prev;
     

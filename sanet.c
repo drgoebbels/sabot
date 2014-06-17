@@ -33,7 +33,7 @@ monitor_s monitor = {
     .lock = PTHREAD_MUTEX_INITIALIZER
 };
 
-static FILE *traf_log;
+static FILE *traf_log, *stats;
 static connect_inst_s *connlist_tail;
 
 /* Initial Packet Sent when logging in */
@@ -164,7 +164,12 @@ connect_inst_s *login(const char *server, const char *uname, const char *pass)
     connect_inst_s *conn;
     char lname[strlen(uname)+sizeof(".log")];
     
-    
+    stats = fopen("stats.log", "w");
+    if(!stats) {
+        fprintf(stderr, "Unable to create stats file for logging");
+        return NULL;
+    }
+
     if(strlen(uname) + strlen(pass) + sizeof(LOGIN_FLAG) + 1 > 2*MAX_UNAME_PASS+5) {
         fprintf(stderr, "Input too large you retard\n");
         return NULL;
@@ -413,7 +418,7 @@ void connect_thread(connect_inst_s *conn)
                 events.message->type = netgetc(conn);
                 
                 if(events.message->type == 'P') {
-                    //send_pmessage(conn, "Hey, go away. I'm busy making love to Kim Jong Un you brussel-sprout-encrusted sugar plum turd.", lexbuf);
+                    //send_pmessage(conn, "I'M AFK YOU SUGAR PLUM TURD FROSTING", lexbuf);
                 }
 
                 /* get message content */
@@ -425,7 +430,7 @@ void connect_thread(connect_inst_s *conn)
                 chptr = &conn->chat;
                 
                 if(spam_check(events.message)) {
-                    fprintf(stderr, "SPAM DETECTED!\m");
+                    fprintf(stderr, "SPAM DETECTED!\n");
                 }
                 
                 pthread_mutex_lock(&chptr->lock);
@@ -548,14 +553,35 @@ int netgetc(connect_inst_s *s)
 
 bool spam_check(message_s *msg)
 {
+    bool ret = false;
+    unsigned long val;
+    time_t dt;
     user_s *u = msg->base.user;
     
     if(u->prev) {
+        dt = time(NULL) - u->prev->base.timestamp;
+        
+        val = dt*(1 + abs(strcmp(msg->text, u->prev->text)));
+        
+        fprintf(stats, "For %s:\n%s\n%s\nval is: %lu\n", u->name, u->prev->text, msg->text, val);
+        fflush(stats);
         
         free(u->prev);
+        
+        if(val <= 10) {
+            u->spamcount++;
+            if(u->spamcount >= 5) {
+                ret = true;
+                fputs("SPAM!\n", stats);
+            }
+        }
+        else if(u->spamcount > 0) {
+            u->spamcount--;
+        }
+        fputc('\n', stats);
     }
     u->prev = msg;
-    return false;
+    return ret;
 }
 
 

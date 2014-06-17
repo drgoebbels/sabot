@@ -116,6 +116,11 @@ void MainWindow::postRemoteMessage(message_s *msg)
     message += msg->text;
     list->addItem(message.c_str());
     list->scrollToBottom();
+
+   /* if(list->count() >= MAX_CHATMESSAGE_WINDOW) {
+        QListWidgetItem *victim = list->takeItem(0);
+        delete victim;
+    }*/
 }
 
 void MainWindow::loginAccept()
@@ -198,7 +203,7 @@ void MainWindow::editGamesSlot(edit_games_s *game)
 
     gameList->clear();
     for(bg = g = game->glist; bg; g = bg) {
-        gameList->addItem(strdup(g->name));
+        gameList->addItem(g->name);
         bg = g->next;
         free(g);
     }

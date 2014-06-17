@@ -70,7 +70,7 @@ signals:
 
 private:
 
-
+    static const unsigned MAX_CHATMESSAGE_WINDOW = 1000;
     Ui::MainWindow *ui;
     MonitorThread *monitor;
     bool suppressLoginSignal = false;

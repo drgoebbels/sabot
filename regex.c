@@ -229,7 +229,6 @@ void rp_class(nfa_s *nfa)
     }
 }
 
-
 bool rp_closure(void)
 {
     switch(*c) {
