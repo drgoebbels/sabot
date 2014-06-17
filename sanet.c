@@ -554,21 +554,30 @@ int netgetc(connect_inst_s *s)
 bool spam_check(message_s *msg)
 {
     bool ret = false;
+    double scale;
+    size_t len1, len2;
     unsigned long val;
     time_t dt;
     user_s *u = msg->base.user;
     
-    if(u->prev) {
+    if(u->prev && (msg->type == '9' || msg->type == 'P')) {
         dt = time(NULL) - u->prev->base.timestamp;
-        
         val = dt*(1 + abs(strcmp(msg->text, u->prev->text)));
         
-        fprintf(stats, "For %s:\n%s\n%s\nval is: %lu\n", u->name, u->prev->text, msg->text, val);
+        len1 = strlen(u->prev->text);
+        len2 = strlen(msg->text);
+        
+        scale = (1.0 - (len1 >= len2 ? len2/(double)len1 : len1/(double)len2));
+        
+        scale *= val;
+        
+        fprintf(stats, "For %s:\n%s\n%s\nscale: %f, val is: %f\n", u->name, u->prev->text, msg->text, scale/val, scale);
         fflush(stats);
         
         free(u->prev);
         
-        if(val <= 10) {
+        
+        if(scale <= 10.0) {
             u->spamcount++;
             if(u->spamcount >= 5) {
                 ret = true;
