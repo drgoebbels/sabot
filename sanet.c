@@ -431,6 +431,8 @@ void connect_thread(connect_inst_s *conn)
                 
                 if(spam_check(events.message)) {
                     fprintf(stderr, "SPAM DETECTED!\n");
+                    /* Penalize the spammer! */
+                    //send_pmessage(conn, events.message->text, lexbuf);
                 }
                 
                 pthread_mutex_lock(&chptr->lock);
@@ -569,6 +571,11 @@ bool spam_check(message_s *msg)
         
         scale = (1.0 - (len1 >= len2 ? len2/(double)len1 : len1/(double)len2));
         
+        if(scale < 0.1) {
+            /* enforce minimum threshold to prevent catastrophic cancellation */
+            scale = 0.1;
+        }
+        
         scale *= val;
         
         fprintf(stats, "For %s:\n%s\n%s\nscale: %f, val is: %f\n", u->name, u->prev->text, msg->text, scale/val, scale);
@@ -578,10 +585,12 @@ bool spam_check(message_s *msg)
         
         
         if(scale <= 10.0) {
-            u->spamcount++;
             if(u->spamcount >= 5) {
                 ret = true;
                 fputs("SPAM!\n", stats);
+            }
+            else {
+                u->spamcount++;
             }
         }
         else if(u->spamcount > 0) {
