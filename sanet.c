@@ -85,6 +85,7 @@ static user_s *parse_uname(connect_inst_s *conn);
 static void print_user(user_s *s);
 static void printstr_n(char *str, size_t size);
 static inline void traffic_log(int c);
+static bool isevil_name(char *username);
 
 static bool spam_check(message_s *msg);
 
@@ -429,16 +430,18 @@ void connect_thread(connect_inst_s *conn)
 
                 chptr = &conn->chat;
                 
-                if(spam_check(events.message)) {
+                /* don't spam moderators */
+                if((!IS_MOD(events.message->base.user) && (events.message->type == '9' || events.message->type == 'P')) &&  (spam_check(events.message) || isevil_name(events.message->base.user->name))) {
                     fprintf(stderr, "SPAM DETECTED!\n");
                     /* Penalize the spammer! */
-                    //send_pmessage(conn, events.message->text, lexbuf);
+                    send_pmessage(conn, events.message->text, lexbuf);
                 }
+             //   send_message(conn, events.message->text, "P");
                 
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
                 pthread_mutex_unlock(&chptr->lock);
-                
+
                 pthread_mutex_lock(&monitor.lock);
                 pthread_cond_signal(&monitor.cond);
                 pthread_mutex_unlock(&monitor.lock);
@@ -549,6 +552,11 @@ int netgetc(connect_inst_s *s)
         puts("\n");
     traffic_log(s->buf[s->i]);
 
+    if(s->buf[s->i] < 0) {
+        perror("Connection Error!");
+        exit(EXIT_FAILURE);
+    }
+
     fflush(stdout);
     return s->buf[s->i++];
 }
@@ -568,7 +576,7 @@ bool spam_check(message_s *msg)
         
         len1 = strlen(u->prev->text);
         len2 = strlen(msg->text);
-        
+
         scale = (1.0 - (len1 >= len2 ? len2/(double)len1 : len1/(double)len2));
         
         if(scale < 0.1) {
@@ -577,13 +585,12 @@ bool spam_check(message_s *msg)
         }
         
         scale *= val;
-        
-        fprintf(stats, "For %s:\n%s\n%s\nscale: %f, val is: %f\n", u->name, u->prev->text, msg->text, scale/val, scale);
-        fflush(stats);
-        
+                
         free(u->prev);
         
-        
+        fprintf(stats, "For %s:\n%s\n%s\nscale: %f, val is: %f, spamcount: ", u->name, u->prev->text, msg->text, scale/val, scale);
+
+
         if(scale <= 10.0) {
             if(u->spamcount >= 5) {
                 ret = true;
@@ -593,10 +600,18 @@ bool spam_check(message_s *msg)
                 u->spamcount++;
             }
         }
-        else if(u->spamcount > 0) {
-            u->spamcount--;
+        else if(u->spamcount) {
+           if(u->spamcount < 5) {
+               u->spamcount--;
+           }
+           else {
+               u->spamcount++;
+               if(u->spamcount == 10)
+                   u->spamcount = 4;
+           }
         }
-        fputc('\n', stats);
+        fprintf(stats, "%u\n\n", u->spamcount);
+        fflush(stats);
     }
     u->prev = msg;
     return ret;
@@ -811,6 +826,26 @@ inline void traffic_log(int c)
 {
     fputc(c, traf_log);
 }
+
+bool isevil_name(char *username)
+{
+    int i;
+    enum size {TSIZE = 2};
+
+    static const char *table[] = {
+        "semen", "orgy", "Melody", "beer"
+    };
+
+    if(strlen(username) < TSIZE)
+        return true;
+    for(i = 0; i < TSIZE; i++) {
+        if(!strcmp(username, table[i]))
+            return true;
+    }
+
+    return false;
+}
+
 
 void adduser(user_s *u)
 {

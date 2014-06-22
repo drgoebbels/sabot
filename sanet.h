@@ -33,6 +33,7 @@ extern "C" {
 
 #define ERROR_USER_NAME "_%ERR%_"
 #define UNAME_IS_ERROR(a) (*(uint64_t *)a == *(uint64_t *)ERROR_USER_NAME)
+#define IS_MOD(u) (u->mod_level != '0')
     
 #define SPAM_DETECT_WINDOW 5
     
