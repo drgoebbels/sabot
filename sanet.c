@@ -431,7 +431,7 @@ void connect_thread(connect_inst_s *conn)
                 chptr = &conn->chat;
                 
                 /* don't spam moderators */
-                if((!IS_MOD(events.message->base.user) && (events.message->type == '9' || events.message->type == 'P')) &&  (spam_check(events.message) || isevil_name(events.message->base.user->name))) {
+                if((spam_check(events.message) || isevil_name(events.message->base.user->name))) {
                     fprintf(stderr, "SPAM DETECTED!\n");
                     /* Penalize the spammer! */
                     send_pmessage(conn, events.message->text, lexbuf);
@@ -564,16 +564,16 @@ int netgetc(connect_inst_s *s)
 bool spam_check(message_s *msg)
 {
     bool ret = false;
-    double scale;
+    double scale, val;
     size_t len1, len2;
-    unsigned long val;
     time_t dt;
     user_s *u = msg->base.user;
     
-    if(u->prev && (msg->type == '9' || msg->type == 'P')) {
+    if(u->prev && !IS_MOD(u) && (msg->type == '9' || msg->type == 'P')) {
         dt = time(NULL) - u->prev->base.timestamp;
-        val = dt*(1 + abs(strcmp(msg->text, u->prev->text)));
+        val = dt*(0.1 + abs(strcasecmp(msg->text, u->prev->text)));
         
+
         len1 = strlen(u->prev->text);
         len2 = strlen(msg->text);
 
