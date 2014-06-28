@@ -213,6 +213,7 @@ extern chat_event_s *event_dequeue(connect_inst_s *conn);
 
 extern void adduser(user_s *u);
 extern user_s *userlookup(char *uid);
+extern user_s *getuser_from_name(char *name);
 extern void deleteuser(char *uid);
 
 #if defined __cplusplus

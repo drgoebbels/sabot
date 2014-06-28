@@ -68,6 +68,14 @@ static user_s err_user = {
     .name = ERROR_USER_NAME
 };
 
+
+#define N_INSULTS 3
+static const char *insults[] = {
+    "is the prince of turds.",
+    "likes to dress up his poopies in uniform.",
+    "is a disgrace to his own acne."
+};
+
 static bool check_login(const char *server, const char *uname, const char *pass);
 static int connect_(const char *server);
 static int login_(connect_inst_s *conn);
@@ -86,6 +94,7 @@ static void print_user(user_s *s);
 static void printstr_n(char *str, size_t size);
 static inline void traffic_log(int c);
 static bool isevil_name(char *username);
+static void check_insult(message_s *msg, connect_inst_s *c);
 
 static bool spam_check(message_s *msg);
 
@@ -434,10 +443,12 @@ void connect_thread(connect_inst_s *conn)
                 if((spam_check(events.message) || isevil_name(events.message->base.user->name))) {
                     fprintf(stderr, "SPAM DETECTED!\n");
                     /* Penalize the spammer! */
-                    send_pmessage(conn, events.message->text, lexbuf);
+                  //  send_pmessage(conn, events.message->text, lexbuf);
                 }
              //   send_message(conn, events.message->text, "P");
                 
+                check_insult(events.message, conn);
+
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
                 pthread_mutex_unlock(&chptr->lock);
@@ -842,10 +853,43 @@ bool isevil_name(char *username)
         if(!strcmp(username, table[i]))
             return true;
     }
-
+    
     return false;
 }
 
+void check_insult(message_s *msg, connect_inst_s *c)
+{
+    user_s *u;
+    char *m = msg->text;
+    char buf[512], *b = buf;
+    char insult[512];
+    
+    if(*m == ',') {
+        if(!strncmp(m+1, "insult", 6)) {
+            m += 7;
+            if(*m != ' ')
+                return;
+            while(*++m == ' ');
+            while(*m && ((*b++ = *m++) != ' '));
+            *b = '\0';
+            
+            
+            
+            u = getuser_from_name(buf);
+            
+            *b++ = ' ';
+            *b = '\0';
+            
+            if(u) {
+                strcpy(insult, buf);
+                puts("Sending Insult!");
+                fflush(stdout);
+                sleep(1);
+                send_message(c, strcat(buf, insults[rand() % N_INSULTS]), "9");
+            }
+        }
+    }
+}
 
 void adduser(user_s *u)
 {
@@ -891,6 +935,22 @@ user_s *userlookup(char *uid)
     fprintf(stderr, "Error: Tried to look up %s\n\n", uid);
     return &err_user;
 }
+
+user_s *getuser_from_name(char *name)
+{
+    int i;
+    uid_record_s *rec;
+    
+    for(i = 0; i < UID_TABLE_SIZE; i++) {
+        for(rec = sanet_users.table[i]; rec; rec = rec->next) {
+            if(!strcmp(rec->user->name, name)) {
+                return rec->user;
+            }
+        }
+    }
+    return NULL;
+}
+
 
 void deleteuser(char *uid)
 {

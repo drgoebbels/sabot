@@ -839,7 +839,7 @@ inline void InvMixColumns(aesblock_s *state)
 {
     unsigned c;
     aesblock_s backup;
-    
+        
     backup.q[0] = state->q[0];
     backup.q[1] = state->q[1];
     
