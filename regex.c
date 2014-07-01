@@ -215,6 +215,8 @@ nfa_s *rp_expression(void)
 
 void rp_class(nfa_s *nfa)
 {
+    regx_val_s val;
+    
     while(*++c != ']') {
         if(!*c) {
             rp_error("Unbalanced ']'");
@@ -224,7 +226,8 @@ void rp_class(nfa_s *nfa)
             rp_class(nfa);
         }
         else {
-            
+            val.c = *c;
+            rp_makenode(nfa->final, val);
         }
     }
 }

@@ -69,11 +69,12 @@ static user_s err_user = {
 };
 
 
-#define N_INSULTS 3
+#define N_INSULTS 4
 static const char *insults[] = {
     "is the prince of turds.",
     "likes to dress up his poopies in uniform.",
-    "is a disgrace to his own acne."
+    "is a disgrace to his own acne.",
+    "is physically attracted to bald chipmunks."
 };
 
 static bool check_login(const char *server, const char *uname, const char *pass);
@@ -447,7 +448,7 @@ void connect_thread(connect_inst_s *conn)
                 }
              //   send_message(conn, events.message->text, "P");
                 
-                check_insult(events.message, conn);
+               // check_insult(events.message, conn);
 
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
@@ -896,7 +897,7 @@ void adduser(user_s *u)
     uint16_t index = uid_hash(u->id);
     uint32_t k = *(uint32_t *)u->id, tmp; /* ,,|,, strict aliasing */
     uid_record_s *rec = sanet_users.table[index], *n;
-    
+
     n = alloc(sizeof(*n));
     n->user = u;
     n->next = NULL;
