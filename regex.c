@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #define INIT_BLOCKSIZE 4
+#define MAX_REPITITION_BUF 15
 
 #define rp_error(a) rp_error_(a,sizeof(a))
 
@@ -143,6 +144,9 @@ nfa_s *rp_expression(void)
     nfa_s vnfa;
     nfa_s *nfa, *subexp;
     regx_val_s val;
+    char    r1[MAX_REPITITION_BUF + 1],
+            r2[MAX_REPITITION_BUF + 1],
+            *rptr;
     
     nfa = alloc(sizeof(*nfa));
     vnfa.start = nfa->start = fsmnode_s_();
@@ -195,8 +199,36 @@ nfa_s *rp_expression(void)
                 rp_bridge(vnfa.start, vnfa.final, val);
                 break;
             case '{':
+                rptr = r1;
                 val.is_scalar = false;
-                while(*++c != '}');
+                while(*++c != '}') {
+                    
+                    if(*c >= '0' && *c <= '9') {
+                        *rptr++ = *c;
+                    }
+                    else if(*c == ',') {
+                        if(rptr == r1) {
+                        }
+                        else {
+                            if(rptr == r2) {
+                                
+                            }
+                            else if(rptr > r2 && rptr < r2 + MAX_REPITITION_BUF) {
+                                rp_error("Only two values permitted in repetition clause.");
+                            }
+                        }
+                        rptr = r2;
+                    }
+                    else if(
+                            *c != ' ' &&
+                            *c != '\t'&&
+                            *c != '\v'&&
+                            *c != '\n'&&
+                            *c != '\r'
+                            ) {
+                        rp_error("Invalid character in repetition clause.");
+                    }
+                }
                 val.is_scalar = true;
                 break;
             case ')':
