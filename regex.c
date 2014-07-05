@@ -50,7 +50,7 @@ static void rp_start(void);
 static nfa_s *rp_expressions();
 static void rp_expressions_(nfa_s *nfa);
 static nfa_s *rp_expression(void);
-static void rp_class(nfa_s *nfa);
+static nfa_s *rp_class(nfa_s *nfa);
 static bool rp_closure(void);
 static void rp_union(void);
 
@@ -213,23 +213,44 @@ nfa_s *rp_expression(void)
     return nfa;
 }
 
-void rp_class(nfa_s *nfa)
+nfa_s *rp_class(nfa_s *nfa)
 {
+    nfa_s *cl;
+    fsmedge_s *e;
+    fsmnode_s *start, *final;
     regx_val_s val;
-    
+
+    cl = alloc(sizeof *cl);
+    cl->start = start = fsmnode_s_();
+    cl->final = final = fsmnode_s_();
+
     while(*++c != ']') {
-        if(!*c) {
-            rp_error("Unbalanced ']'");
-            break;
-        }
-        else if(*c == '[') {
-            rp_class(nfa);
-        }
-        else {
-            val.c = *c;
-            rp_makenode(nfa->final, val);
+        switch(*c) {
+            case '[':
+                rp_class(nfa);
+                break;
+            case '-':
+                e = start->edges[start->nedges - 1];
+                e->val.is_scalar = false;
+                e->val.low = *(c - 1);
+                e->val.high = *(c + 1);
+                if(*(c - 1) >= *(c + 1)) {
+                    rp_error("Invalid character class range");
+
+                }
+                break;
+            case '\0':
+                rp_error("Unbalanced ']'");
+                break;
+            case '\\':
+            default:
+                val.c = *c;
+                printf("Adding: %c\n", val.c);
+                rp_bridge(start, final, val);
+                break;
         }
     }
+    return cl;
 }
 
 bool rp_closure(void)
@@ -257,8 +278,8 @@ fsmnode_s *rp_makenode(fsmnode_s *parent, regx_val_s val)
 fsmnode_s *fsmnode_s_(void)
 {
     fsmnode_s *n;
-    
-    n = alloc(sizeof(*n));
+
+    n = alloc(sizeof *n);
     n->blocksize = INIT_BLOCKSIZE;
     n->edges = alloc(INIT_BLOCKSIZE * sizeof(*n->edges));
     n->nedges = 0;
@@ -270,7 +291,7 @@ void rp_bridge(fsmnode_s *parent, fsmnode_s *child, regx_val_s val)
 {
     fsmedge_s *e;
     
-    e = alloc(sizeof(*e));
+    e = alloc(sizeof *e);
     e->val = val;
     e->parent = parent;
     e->child = child;

@@ -444,11 +444,12 @@ void connect_thread(connect_inst_s *conn)
                 if((spam_check(events.message) || isevil_name(events.message->base.user->name))) {
                     fprintf(stderr, "SPAM DETECTED!\n");
                     /* Penalize the spammer! */
-                  //  send_pmessage(conn, events.message->text, lexbuf);
+                      send_pmessage(conn, events.message->text, lexbuf);
+                      break;
                 }
              //   send_message(conn, events.message->text, "P");
                 
-               // check_insult(events.message, conn);
+                check_insult(events.message, conn);
 
                 pthread_mutex_lock(&chptr->lock);
                 event_enqueue(conn, events.event);
