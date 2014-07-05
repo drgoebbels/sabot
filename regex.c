@@ -144,6 +144,7 @@ nfa_s *rp_expression(void)
     nfa_s vnfa;
     nfa_s *nfa, *subexp;
     regx_val_s val;
+    repet_s *rep;
     char    r1[MAX_REPITITION_BUF + 1],
             r2[MAX_REPITITION_BUF + 1],
             *rptr;
@@ -201,6 +202,10 @@ nfa_s *rp_expression(void)
             case '{':
                 rptr = r1;
                 val.is_scalar = false;
+                
+                rep = alloc(sizeof *rep);
+                rep->count = 0;
+                
                 while(*++c != '}') {
                     
                     if(*c >= '0' && *c <= '9') {
@@ -210,7 +215,10 @@ nfa_s *rp_expression(void)
                         if(rptr == r1) {
                         }
                         else {
-                            if(rptr == r2) {
+                            if(rptr > r1 && rptr < r1 + MAX_REPITITION_BUF) {
+                                *rptr = '\0';
+                            }
+                            else if(rptr == r2) {
                                 
                             }
                             else if(rptr > r2 && rptr < r2 + MAX_REPITITION_BUF) {
@@ -229,6 +237,10 @@ nfa_s *rp_expression(void)
                         rp_error("Invalid character in repetition clause.");
                     }
                 }
+                *rptr = '\0';
+                rep->low = atoi(r1);
+                rep->high = atoi(r2);
+                printf("low: %u, high: %u\n", rep->low, rep->high);
                 val.is_scalar = true;
                 break;
             case ')':
@@ -314,6 +326,7 @@ fsmnode_s *fsmnode_s_(void)
     n = alloc(sizeof *n);
     n->blocksize = INIT_BLOCKSIZE;
     n->edges = alloc(INIT_BLOCKSIZE * sizeof(*n->edges));
+    n->rep = NULL;
     n->nedges = 0;
     return n;
 }

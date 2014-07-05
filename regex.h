@@ -10,6 +10,7 @@ typedef struct fsmedge_s fsmedge_s;
 typedef struct fsmnode_s fsmnode_s;
 typedef struct regerr_s regerr_s;
 typedef struct nfa_s nfa_s;
+typedef struct repet_s repet_s;
 
 struct regx_val_s {
     bool is_scalar;
@@ -40,6 +41,7 @@ struct fsmnode_s
 {
     unsigned nedges;
     unsigned blocksize;
+    repet_s *rep;
     fsmedge_s **edges;
 };
 
@@ -54,6 +56,13 @@ struct nfa_s
 {
     fsmnode_s *start;
     fsmnode_s *final;
+};
+
+struct repet_s
+{
+    unsigned low;
+    unsigned high;
+    unsigned count;
 };
 
 extern regex_s *compile_regex(const char *src);
