@@ -149,7 +149,7 @@ nfa_s *rp_expression(void)
             r2[MAX_REPITITION_BUF + 1],
             *rptr;
     
-    nfa = alloc(sizeof(*nfa));
+    nfa = alloc(sizeof *nfa);
     vnfa.start = nfa->start = fsmnode_s_();
     vnfa.final = nfa->final = nfa->start;
     
@@ -240,7 +240,6 @@ nfa_s *rp_expression(void)
                 *rptr = '\0';
                 rep->low = atoi(r1);
                 rep->high = atoi(r2);
-                printf("low: %u, high: %u\n", rep->low, rep->high);
                 val.is_scalar = true;
                 break;
             case ')':
